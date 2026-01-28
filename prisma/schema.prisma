@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profiles  Profile[]
+}
+
+model Profile {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Parsed resume data
+  fullName        String?
+  email           String?
+  phone           String?
+  location        String?
+  summary         String?
+  rawResumeText   String?
+
+  // Structured data (stored as JSON)
+  experience      Json?          // Array of work experiences
+  education       Json?          // Array of education entries
+  skills          Json?          // Array of skills
+  certifications  Json?          // Array of certifications
+
+  // Analysis results
+  analyses        Analysis[]
+  webPresences    WebPresence[]
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model Analysis {
+  id              String   @id @default(cuid())
+  profileId       String
+  profile         Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  // AI Analysis results
+  inferredSkills  Json?    // Skills inferred beyond what's stated
+  skillGaps       Json?    // Identified skill gaps
+  careerTrajectory Json?   // Career path analysis
+  marketPosition  Json?    // Labor market positioning
+  recommendations Json?    // Actionable recommendations
+  strengths       Json?    // Identified strengths
+  concerns        Json?    // Potential red flags employers might see
+
+  // Metadata
+  analysisType    String   // 'full', 'skills', 'career', 'market'
+  status          String   @default("pending") // pending, processing, completed, failed
+  errorMessage    String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model WebPresence {
+  id          String   @id @default(cuid())
+  profileId   String
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  platform    String   // 'linkedin', 'github', 'twitter', 'website', 'publication', etc.
+  url         String
+  username    String?
+  title       String?
+  description String?
+  rawData     Json?    // Full data from API
+
+  // Enrichment status
+  enriched    Boolean  @default(false)
+  enrichedAt  DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
