@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { extractTextFromPdf } from "@/lib/api/pdfco";
 import { parseResumeWithAI, analyzeProfile } from "@/lib/api/claude";
 import { findProfessionalProfiles } from "@/lib/api/serpapi";
-import { getLinkedInProfile, lookupLinkedInByEmail } from "@/lib/api/proxycurl";
-import { getSkillDemand } from "@/lib/api/lightcast";
+import { getLinkedInProfile, lookupLinkedInByEmail } from "@/lib/api/brightdata";
+import { getSkillDemand } from "@/lib/api/jobspikr";
 import type { LinkedInProfile, WebPresenceResult } from "@/types";
 
 export const maxDuration = 60; // Allow up to 60 seconds for the full analysis

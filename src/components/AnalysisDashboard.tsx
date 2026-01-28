@@ -3,13 +3,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import {
   Briefcase,
-  GraduationCap,
   Star,
   TrendingUp,
   AlertTriangle,
   CheckCircle,
   Globe,
-  Target,
   Lightbulb,
 } from "lucide-react";
 import type { ProfileAnalysis, ParsedResume, WebPresenceResult } from "@/types";
