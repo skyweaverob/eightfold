@@ -9,6 +9,23 @@ import type {
 
 const anthropic = new Anthropic();
 
+// Helper to extract JSON from Claude response (handles markdown code blocks)
+function extractJSON(text: string): string {
+  // Try to extract JSON from markdown code blocks
+  const jsonBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonBlockMatch) {
+    return jsonBlockMatch[1].trim();
+  }
+
+  // Try to find JSON object directly
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    return jsonMatch[0];
+  }
+
+  return text.trim();
+}
+
 export async function parseResumeWithAI(rawText: string): Promise<ParsedResume> {
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
@@ -75,12 +92,14 @@ Return ONLY the JSON object, no additional text.`,
   }
 
   try {
-    const parsed = JSON.parse(content.text);
+    const jsonText = extractJSON(content.text);
+    const parsed = JSON.parse(jsonText);
     return {
       ...parsed,
       rawText,
     };
-  } catch {
+  } catch (e) {
+    console.error("Failed to parse Claude response:", content.text.slice(0, 500));
     throw new Error("Failed to parse Claude response as JSON");
   }
 }
@@ -175,8 +194,10 @@ Return ONLY the JSON object.`,
   }
 
   try {
-    return JSON.parse(content.text);
-  } catch {
+    const jsonText = extractJSON(content.text);
+    return JSON.parse(jsonText);
+  } catch (e) {
+    console.error("Failed to parse analysis response:", content.text.slice(0, 500));
     throw new Error("Failed to parse analysis response as JSON");
   }
 }

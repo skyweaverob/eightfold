@@ -4,7 +4,7 @@ import { useState } from "react";
 import { FileUpload } from "@/components/FileUpload";
 import { AnalysisDashboard } from "@/components/AnalysisDashboard";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Shield, Zap, Eye } from "lucide-react";
+import { ArrowLeft, Shield, Zap, Eye, Loader2, CheckCircle } from "lucide-react";
 import type { ProfileAnalysis, ParsedResume, WebPresenceResult } from "@/types";
 
 interface AnalysisResult {
@@ -13,46 +13,124 @@ interface AnalysisResult {
   analysis: ProfileAnalysis;
 }
 
+interface ProgressStep {
+  step: number;
+  message: string;
+  detail?: string;
+  complete: boolean;
+}
+
+const STEP_LABELS = [
+  "Extract PDF",
+  "Parse Resume",
+  "Web Presence",
+  "Market Data",
+  "AI Analysis",
+];
+
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [progress, setProgress] = useState<string>("");
+  const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([]);
+  const [currentStep, setCurrentStep] = useState<ProgressStep | null>(null);
 
   const handleFileSelect = async (file: File) => {
     setIsLoading(true);
     setError(null);
-    setProgress("Uploading resume...");
+    setResult(null);
+    setProgressSteps([]);
+    setCurrentStep(null);
 
     try {
       const formData = new FormData();
       formData.append("resume", file);
-
-      setProgress("Analyzing your profile... This may take up to a minute.");
 
       const response = await fetch("/api/analyze", {
         method: "POST",
         body: formData,
       });
 
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || "Analysis failed");
+      if (!response.body) {
+        throw new Error("No response body");
       }
 
-      setResult(data.data);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const data = JSON.parse(line);
+
+            if (data.type === "progress") {
+              const step: ProgressStep = {
+                step: data.step,
+                message: data.message,
+                detail: data.detail,
+                complete: false,
+              };
+
+              setCurrentStep(step);
+
+              // Mark previous step as complete
+              setProgressSteps((prev) => {
+                const updated = [...prev];
+                if (updated.length > 0) {
+                  updated[updated.length - 1].complete = true;
+                }
+                // Only add if it's a new step number or first occurrence
+                if (!updated.some((s) => s.step === step.step)) {
+                  updated.push(step);
+                } else {
+                  // Update existing step
+                  const idx = updated.findIndex((s) => s.step === step.step);
+                  updated[idx] = step;
+                }
+                return updated;
+              });
+            } else if (data.type === "error") {
+              throw new Error(data.error);
+            } else if (data.type === "result" && data.success) {
+              setProgressSteps((prev) => {
+                const updated = [...prev];
+                if (updated.length > 0) {
+                  updated[updated.length - 1].complete = true;
+                }
+                return updated;
+              });
+              setResult(data.data);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              console.error("Failed to parse line:", line);
+            } else {
+              throw e;
+            }
+          }
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setIsLoading(false);
-      setProgress("");
+      setCurrentStep(null);
     }
   };
 
   const handleReset = () => {
     setResult(null);
     setError(null);
+    setProgressSteps([]);
   };
 
   return (
@@ -125,9 +203,60 @@ export default function Home() {
             <div className="max-w-xl mx-auto">
               <FileUpload onFileSelect={handleFileSelect} isLoading={isLoading} />
 
-              {isLoading && progress && (
-                <div className="mt-4 text-center">
-                  <p className="text-sm text-gray-500 animate-pulse">{progress}</p>
+              {/* Progress Display */}
+              {isLoading && progressSteps.length > 0 && (
+                <div className="mt-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                  <div className="space-y-3">
+                    {/* Step indicators */}
+                    <div className="flex justify-between mb-4">
+                      {STEP_LABELS.map((label, idx) => {
+                        const stepNum = idx + 1;
+                        const isComplete = progressSteps.some(
+                          (s) => s.step > stepNum || (s.step === stepNum && s.complete)
+                        );
+                        const isCurrent = currentStep?.step === stepNum;
+
+                        return (
+                          <div key={idx} className="flex flex-col items-center">
+                            <div
+                              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+                                isComplete
+                                  ? "bg-green-500 text-white"
+                                  : isCurrent
+                                    ? "bg-blue-500 text-white"
+                                    : "bg-gray-200 dark:bg-gray-700 text-gray-500"
+                              }`}
+                            >
+                              {isComplete ? (
+                                <CheckCircle className="w-4 h-4" />
+                              ) : isCurrent ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                stepNum
+                              )}
+                            </div>
+                            <span className="text-xs mt-1 text-gray-500 hidden sm:block">
+                              {label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Current step detail */}
+                    {currentStep && (
+                      <div className="text-center">
+                        <p className="font-medium text-gray-900 dark:text-gray-100">
+                          {currentStep.message}
+                        </p>
+                        {currentStep.detail && (
+                          <p className="text-sm text-gray-500 mt-1">
+                            {currentStep.detail}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
