@@ -156,7 +156,14 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error("Web presence search failed:", error);
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          console.error("Web presence search failed:", errorMsg);
+          // Send a warning progress message so users know web search failed
+          if (errorMsg.includes("Invalid API key") || errorMsg.includes("401")) {
+            sendProgress(3, "Web search unavailable", "Search API key needs to be configured - skipping web presence discovery");
+          } else {
+            sendProgress(3, "Web search limited", `Some searches failed: ${errorMsg.slice(0, 100)}`);
+          }
         }
 
         // Step 4: Get labor market data

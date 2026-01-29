@@ -90,6 +90,7 @@ export interface DeepSearchResults {
 export async function searchWeb(query: string, num: number = 20): Promise<SearchResult[]> {
   const apiKey = process.env.SERPAPI_API_KEY;
   if (!apiKey) {
+    console.error("SERPAPI_API_KEY is not configured in environment variables");
     throw new Error("SERPAPI_API_KEY is not configured");
   }
 
@@ -102,32 +103,39 @@ export async function searchWeb(query: string, num: number = 20): Promise<Search
     hl: "en",
   });
 
+  console.log(`SerpAPI search: "${query}" (requesting ${num} results)`);
+
   const response = await fetch(`${SERPAPI_URL}?${params.toString()}`);
 
   if (!response.ok) {
-    throw new Error(`SerpAPI request failed: ${response.statusText}`);
+    const errorText = await response.text();
+    console.error(`SerpAPI request failed: ${response.status} ${response.statusText}`, errorText);
+    throw new Error(`SerpAPI request failed: ${response.status} - ${errorText}`);
   }
 
   const data: SerpApiResponse = await response.json();
 
   if (data.error) {
+    console.error(`SerpAPI returned error:`, data.error);
     throw new Error(`SerpAPI error: ${data.error}`);
   }
 
-  return (
-    data.organic_results?.map((result) => ({
-      title: result.title,
-      link: result.link,
-      snippet: result.snippet,
-      date: result.date,
-      source: result.displayed_link || result.source,
-    })) || []
-  );
+  const results = data.organic_results || [];
+  console.log(`SerpAPI returned ${results.length} results for "${query}"`);
+
+  return results.map((result) => ({
+    title: result.title,
+    link: result.link,
+    snippet: result.snippet,
+    date: result.date,
+    source: result.displayed_link || result.source,
+  }));
 }
 
 export async function searchNews(query: string): Promise<SearchResult[]> {
   const apiKey = process.env.SERPAPI_API_KEY;
   if (!apiKey) {
+    console.error("SERPAPI_API_KEY is not configured in environment variables");
     throw new Error("SERPAPI_API_KEY is not configured");
   }
 
@@ -139,27 +147,33 @@ export async function searchNews(query: string): Promise<SearchResult[]> {
     hl: "en",
   });
 
+  console.log(`SerpAPI news search: "${query}"`);
+
   const response = await fetch(`${SERPAPI_URL}?${params.toString()}`);
 
   if (!response.ok) {
-    throw new Error(`SerpAPI news request failed: ${response.statusText}`);
+    const errorText = await response.text();
+    console.error(`SerpAPI news request failed: ${response.status} ${response.statusText}`, errorText);
+    throw new Error(`SerpAPI news request failed: ${response.status} - ${errorText}`);
   }
 
   const data: SerpApiResponse = await response.json();
 
   if (data.error) {
+    console.error(`SerpAPI news returned error:`, data.error);
     throw new Error(`SerpAPI error: ${data.error}`);
   }
 
-  return (
-    data.news_results?.map((result) => ({
-      title: result.title,
-      link: result.link,
-      snippet: result.snippet,
-      date: result.date,
-      source: result.source,
-    })) || []
-  );
+  const results = data.news_results || [];
+  console.log(`SerpAPI news returned ${results.length} results for "${query}"`);
+
+  return results.map((result) => ({
+    title: result.title,
+    link: result.link,
+    snippet: result.snippet,
+    date: result.date,
+    source: result.source,
+  }));
 }
 
 function calculateRelevance(result: SearchResult, searchName: string): number {
@@ -434,26 +448,40 @@ export async function deepWebSearch(
   // Execute all searches and get raw results
   // Get 30+ results per search (3 pages worth)
   const allRawResults: SearchResult[] = [];
+  const searchErrors: string[] = [];
+  let successfulSearches = 0;
 
   for (const query of uniqueQueries) {
     try {
       const searchResults = await searchWeb(query, 40); // 3-4 pages of results
       allRawResults.push(...searchResults);
       results.searchesPerformed += 1;
+      successfulSearches += 1;
     } catch (error) {
-      console.error(`Search failed for: ${query}`, error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error(`Search failed for: ${query}`, errorMsg);
+      searchErrors.push(`Query "${query}": ${errorMsg}`);
     }
   }
 
-  // Also do a news search
+  // Also do a news search - track these separately to ensure they're categorized as news
+  const newsSearchResults: SearchResult[] = [];
   try {
     const newsResults = await searchNews(`"${name}"`);
-    for (const news of newsResults) {
-      allRawResults.push(news);
-    }
+    newsSearchResults.push(...newsResults);
     results.searchesPerformed += 1;
+    successfulSearches += 1;
   } catch (error) {
-    console.error("News search failed:", error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("News search failed:", errorMsg);
+    searchErrors.push(`News search: ${errorMsg}`);
+  }
+
+  // Log summary of search results
+  console.log(`Searches completed: ${successfulSearches} successful, ${searchErrors.length} failed`);
+  console.log(`Total raw results: ${allRawResults.length} web + ${newsSearchResults.length} news`);
+  if (searchErrors.length > 0 && successfulSearches === 0) {
+    console.error("ALL searches failed. Errors:", searchErrors.slice(0, 3).join("; "));
   }
 
   // Deduplicate by URL
@@ -466,7 +494,7 @@ export async function deepWebSearch(
     }
   }
 
-  // Now categorize each result based on URL and content
+  // Categorize web search results based on URL and content
   const allSearchResults: CatalogedSearchResult[] = uniqueResults.map(result => {
     const category = categorizeResult(result);
     return {
@@ -482,12 +510,32 @@ export async function deepWebSearch(
     };
   });
 
+  // Add news results - these are explicitly categorized as news
+  for (const news of newsSearchResults) {
+    if (!seenUrls.has(news.link)) {
+      seenUrls.add(news.link);
+      allSearchResults.push({
+        category: "news",
+        platform: identifyPlatform(news.link),
+        url: news.link,
+        title: news.title,
+        snippet: news.snippet,
+        date: news.date,
+        source: news.source,
+        relevanceScore: calculateRelevance(news, name),
+        searchQuery: name,
+      });
+    }
+  }
+
   // Sort into categories
   for (const result of allSearchResults) {
-
     switch (result.category) {
       case "profile":
         results.profiles.push(result);
+        break;
+      case "news":
+        results.news.push(result);
         break;
       case "publication":
         results.publications.push(result);
