@@ -23,6 +23,7 @@ import type { DeepSearchResults, CatalogedSearchResult } from "@/types";
 interface WebSearchResultsProps {
   results: DeepSearchResults;
   className?: string;
+  embedded?: boolean;
 }
 
 interface CategorySectionProps {
@@ -119,7 +120,7 @@ function CategorySection({
   );
 }
 
-export function WebSearchResults({ results, className }: WebSearchResultsProps) {
+export function WebSearchResults({ results, className, embedded = false }: WebSearchResultsProps) {
   const visibilityColors = {
     high: "text-green-600 bg-green-100",
     medium: "text-yellow-600 bg-yellow-100",
@@ -127,29 +128,8 @@ export function WebSearchResults({ results, className }: WebSearchResultsProps) 
     minimal: "text-red-600 bg-red-100",
   };
 
-  return (
-    <Card className={className}>
-      <CardHeader className="pb-4 border-b">
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-lg text-gray-900">
-            <Search className="w-5 h-5 text-blue-600" />
-            Deep Web Search Results
-          </div>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="text-gray-500">
-              {results.totalResults} results from {results.searchesPerformed} searches
-            </span>
-            <span
-              className={`px-2 py-1 rounded-full text-xs font-semibold uppercase ${
-                visibilityColors[results.summary.overallVisibility]
-              }`}
-            >
-              {results.summary.overallVisibility} visibility
-            </span>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-6 space-y-6">
+  const content = (
+    <div className="space-y-6">
         {/* Summary Stats */}
         <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
           <div className="text-center p-3 bg-gray-50 rounded-lg">
@@ -311,6 +291,37 @@ export function WebSearchResults({ results, className }: WebSearchResultsProps) 
             accentColor="text-gray-600"
           />
         </div>
+      </div>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <Card className={className}>
+      <CardHeader className="pb-4 border-b">
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-lg text-gray-900">
+            <Search className="w-5 h-5 text-blue-600" />
+            Deep Web Search Results
+          </div>
+          <div className="flex items-center gap-4 text-sm">
+            <span className="text-gray-500">
+              {results.totalResults} results from {results.searchesPerformed} searches
+            </span>
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-semibold uppercase ${
+                visibilityColors[results.summary.overallVisibility]
+              }`}
+            >
+              {results.summary.overallVisibility} visibility
+            </span>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-6">
+        {content}
       </CardContent>
     </Card>
   );

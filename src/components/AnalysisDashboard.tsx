@@ -1,10 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Badge } from "./ui/badge";
-import { MarketValue } from "./MarketValue";
-import { ParsePreview } from "./ParsePreview";
-import { RedFlags } from "./RedFlags";
+import { Collapsible } from "./ui/collapsible";
 import { JobSearch } from "./JobSearch";
 import { WebSearchResults } from "./WebSearchResults";
 import {
@@ -15,6 +12,11 @@ import {
   CheckCircle,
   ExternalLink,
   Search,
+  AlertTriangle,
+  Eye,
+  DollarSign,
+  FileText,
+  Briefcase,
 } from "lucide-react";
 import type {
   ProfileAnalysis,
@@ -36,31 +38,21 @@ interface AnalysisDashboardProps {
   deepSearchResults?: DeepSearchResults;
 }
 
+function formatSalary(amount: number): string {
+  if (amount >= 1000) {
+    return `$${Math.round(amount / 1000)}K`;
+  }
+  return `$${amount.toLocaleString()}`;
+}
+
 export function AnalysisDashboard({
   analysis,
   resume,
   webPresence,
   salaryEstimate,
-  parsePreview,
   redFlags,
   deepSearchResults,
 }: AnalysisDashboardProps) {
-  // Generate parse preview from resume data if not provided
-  const derivedParsePreview: ParsePreviewType = parsePreview || {
-    detectedRole: resume.experience?.[0]?.title || "Not detected",
-    experienceYears: analysis.career.yearsOfExperience,
-    experienceParsedCorrectly: true,
-    skillsExtracted: resume.skills?.map((s) => s.name) || [],
-    sectionsFound: {
-      experience: (resume.experience?.length || 0) > 0,
-      education: (resume.education?.length || 0) > 0,
-      skills: (resume.skills?.length || 0) > 0,
-      summary: !!resume.summary,
-      contact: !!(resume.email || resume.phone),
-    },
-    parseIssues: [],
-  };
-
   // Convert concerns to red flags if not provided
   const derivedRedFlags: RedFlag[] =
     redFlags ||
@@ -87,7 +79,7 @@ export function AnalysisDashboard({
   };
 
   return (
-    <div className="space-y-10 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto">
       {/* Job Compatibility Search - FIRST AND PROMINENT */}
       <Card className="border-0 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg shadow-blue-100/50 rounded-2xl overflow-hidden">
         <CardHeader className="pb-5 pt-7 px-7">
@@ -98,7 +90,7 @@ export function AnalysisDashboard({
             Check Job Compatibility
           </CardTitle>
           <p className="text-base text-gray-600 mt-2 ml-14">
-            Search for specific roles to see your fit score and salary leverage
+            Search for roles to see your fit score, salary leverage, and <span className="font-semibold text-blue-600">how HR sees you</span>
           </p>
         </CardHeader>
         <CardContent className="px-7 pb-7">
@@ -107,76 +99,66 @@ export function AnalysisDashboard({
             resume={resume}
             marketValue={derivedSalaryEstimate}
           />
+          {/* HR View Callout */}
+          <div className="mt-5 p-4 bg-white/70 rounded-xl border border-blue-200 flex items-center gap-3">
+            <Eye className="w-5 h-5 text-blue-600" />
+            <p className="text-sm text-gray-600">
+              <span className="font-semibold text-gray-900">Pro tip:</span> After selecting a job, toggle to <span className="font-semibold text-blue-600">HR View</span> to see exactly how recruiters evaluate your profile
+            </p>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Market Value */}
-      <MarketValue
-        salary={derivedSalaryEstimate}
-        title={resume.experience?.[0]?.title}
-      />
-
-      {/* Profile Scores */}
-      <div className="grid grid-cols-2 gap-5">
-        <Card className="bg-white border-0 shadow-lg shadow-gray-200/50 rounded-2xl overflow-hidden">
-          <CardContent className="pt-8 pb-7 text-center">
-            <div className="text-5xl font-bold text-blue-500 mb-2 tracking-tight">
+      {/* Quick Stats Row */}
+      <div className="grid grid-cols-3 gap-4">
+        <Card className="bg-white border-0 shadow-md shadow-gray-200/50 rounded-xl overflow-hidden">
+          <CardContent className="py-5 text-center">
+            <div className="text-3xl font-bold text-blue-500 mb-1 tracking-tight">
               {analysis.marketPosition.overallScore}
             </div>
-            <div className="text-base font-medium text-gray-500">Market Score</div>
+            <div className="text-sm font-medium text-gray-500">Market Score</div>
           </CardContent>
         </Card>
-        <Card className="bg-white border-0 shadow-lg shadow-gray-200/50 rounded-2xl overflow-hidden">
-          <CardContent className="pt-8 pb-7 text-center">
-            <div className={`text-5xl font-bold mb-2 tracking-tight ${
-              deepSearchResults?.summary.overallVisibility === "high" ? "text-green-500" :
-              deepSearchResults?.summary.overallVisibility === "medium" ? "text-yellow-500" :
-              deepSearchResults?.summary.overallVisibility === "low" ? "text-orange-500" :
-              "text-red-500"
-            }`}>
-              {deepSearchResults?.totalResults || 0}
+        <Card className="bg-white border-0 shadow-md shadow-gray-200/50 rounded-xl overflow-hidden">
+          <CardContent className="py-5 text-center">
+            <div className="text-3xl font-bold text-gray-900 mb-1 tracking-tight">
+              {analysis.career.yearsOfExperience}
             </div>
-            <div className="text-base font-medium text-gray-500">
-              Web Mentions
-              {deepSearchResults && (
-                <span className={`ml-2 px-2.5 py-1 text-sm rounded-full font-medium ${
-                  deepSearchResults.summary.overallVisibility === "high" ? "bg-green-100 text-green-700" :
-                  deepSearchResults.summary.overallVisibility === "medium" ? "bg-yellow-100 text-yellow-700" :
-                  deepSearchResults.summary.overallVisibility === "low" ? "bg-orange-100 text-orange-700" :
-                  "bg-red-100 text-red-700"
-                }`}>
-                  {deepSearchResults.summary.overallVisibility}
-                </span>
-              )}
+            <div className="text-sm font-medium text-gray-500">Years Exp</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-0 shadow-md shadow-gray-200/50 rounded-xl overflow-hidden">
+          <CardContent className="py-5 text-center">
+            <div className="text-3xl font-bold text-green-500 mb-1 tracking-tight">
+              {formatSalary(derivedSalaryEstimate.median)}
             </div>
+            <div className="text-sm font-medium text-gray-500">Est. Salary</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* What the Machine Sees */}
-      <ParsePreview preview={derivedParsePreview} />
-
-      {/* Skills Analysis */}
-      <Card className="bg-white border-0 shadow-lg shadow-gray-200/50 rounded-2xl overflow-hidden">
-        <CardHeader className="pb-5 pt-7 px-7 border-b border-gray-100">
-          <CardTitle className="flex items-center gap-3 text-xl font-semibold text-gray-900 tracking-tight">
-            <div className="w-10 h-10 bg-amber-400 rounded-xl flex items-center justify-center shadow-lg shadow-amber-400/30">
-              <Star className="w-5 h-5 text-white" />
-            </div>
-            Skills Analysis
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-7 pb-7 px-7 space-y-7">
+      {/* Skills Analysis - Collapsible */}
+      <Collapsible
+        title="Skills Analysis"
+        icon={<div className="w-10 h-10 bg-amber-400 rounded-xl flex items-center justify-center shadow-lg shadow-amber-400/30"><Star className="w-5 h-5 text-white" /></div>}
+        badge={
+          <span className="px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+            {analysis.skills.strengths.length} strengths
+          </span>
+        }
+        defaultOpen={false}
+      >
+        <div className="space-y-6">
           {/* Strengths */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-500 mb-4 uppercase tracking-wider">
+            <h4 className="text-sm font-semibold text-gray-500 mb-3 uppercase tracking-wider">
               Strengths
             </h4>
-            <div className="flex flex-wrap gap-2.5">
+            <div className="flex flex-wrap gap-2">
               {analysis.skills.strengths.map((strength, i) => (
                 <span
                   key={i}
-                  className="px-4 py-2 bg-green-50 text-green-700 rounded-xl text-base font-medium"
+                  className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-sm font-medium"
                 >
                   {strength}
                 </span>
@@ -186,14 +168,14 @@ export function AnalysisDashboard({
 
           {/* In Demand */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-500 mb-4 uppercase tracking-wider">
+            <h4 className="text-sm font-semibold text-gray-500 mb-3 uppercase tracking-wider">
               In Demand
             </h4>
-            <div className="flex flex-wrap gap-2.5">
+            <div className="flex flex-wrap gap-2">
               {analysis.marketPosition.skillsInDemand.map((skill, i) => (
                 <span
                   key={i}
-                  className="px-4 py-2 bg-blue-50 text-blue-700 rounded-xl text-base font-medium"
+                  className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium"
                 >
                   {skill}
                 </span>
@@ -204,17 +186,17 @@ export function AnalysisDashboard({
           {/* Gaps */}
           {analysis.skills.gaps.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold text-gray-500 mb-4 uppercase tracking-wider">
+              <h4 className="text-sm font-semibold text-gray-500 mb-3 uppercase tracking-wider">
                 Gaps to Address
               </h4>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {analysis.skills.gaps.map((gap, i) => (
                   <div
                     key={i}
-                    className="flex items-start gap-4 p-5 bg-gray-50 rounded-xl"
+                    className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl"
                   >
                     <span
-                      className={`px-3 py-1 rounded-lg text-sm font-semibold ${
+                      className={`px-2 py-0.5 rounded text-xs font-semibold ${
                         gap.importance === "high"
                           ? "bg-red-100 text-red-700"
                           : gap.importance === "medium"
@@ -225,10 +207,10 @@ export function AnalysisDashboard({
                       {gap.importance}
                     </span>
                     <div>
-                      <span className="font-semibold text-gray-900 text-lg">
+                      <span className="font-semibold text-gray-900">
                         {gap.skill}
                       </span>
-                      <p className="text-base text-gray-600 mt-1">
+                      <p className="text-sm text-gray-600 mt-0.5">
                         {gap.reason}
                       </p>
                     </div>
@@ -237,42 +219,35 @@ export function AnalysisDashboard({
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </Collapsible>
 
-      {/* Red Flags */}
-      <RedFlags flags={derivedRedFlags} />
-
-      {/* Deep Web Search Results */}
-      {deepSearchResults && (
-        <WebSearchResults results={deepSearchResults} />
-      )}
-
-      {/* Career Trajectory */}
-      <Card className="bg-white border-0 shadow-lg shadow-gray-200/50 rounded-2xl overflow-hidden">
-        <CardHeader className="pb-5 pt-7 px-7 border-b border-gray-100">
-          <CardTitle className="flex items-center gap-3 text-xl font-semibold text-gray-900 tracking-tight">
-            <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <TrendingUp className="w-5 h-5 text-white" />
-            </div>
-            Career Trajectory
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-7 pb-7 px-7 space-y-7">
-          <p className="text-lg text-gray-700 leading-relaxed">
+      {/* Career Trajectory - Collapsible */}
+      <Collapsible
+        title="Career Trajectory"
+        icon={<div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30"><TrendingUp className="w-5 h-5 text-white" /></div>}
+        badge={
+          <span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+            {analysis.career.potentialPaths[0]?.nextRoles?.length || 0} next roles
+          </span>
+        }
+        defaultOpen={false}
+      >
+        <div className="space-y-6">
+          <p className="text-base text-gray-700 leading-relaxed">
             {analysis.career.trajectory}
           </p>
 
           {/* Industry Focus */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-500 mb-4 uppercase tracking-wider">
+            <h4 className="text-sm font-semibold text-gray-500 mb-3 uppercase tracking-wider">
               Industry Focus
             </h4>
-            <div className="flex flex-wrap gap-2.5">
+            <div className="flex flex-wrap gap-2">
               {analysis.career.industryFocus.map((industry, i) => (
                 <span
                   key={i}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-base font-medium"
+                  className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium"
                 >
                   {industry}
                 </span>
@@ -284,151 +259,246 @@ export function AnalysisDashboard({
           {analysis.career.potentialPaths.length > 0 &&
             analysis.career.potentialPaths[0]?.nextRoles.length > 0 && (
               <div>
-                <h4 className="text-sm font-semibold text-gray-500 mb-4 uppercase tracking-wider">
+                <h4 className="text-sm font-semibold text-gray-500 mb-3 uppercase tracking-wider">
                   Potential Next Roles
                 </h4>
-                <div className="space-y-3">
-                  {analysis.career.potentialPaths[0].nextRoles.map(
-                    (role, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between p-5 bg-gray-50 rounded-xl"
-                      >
-                        <span className="font-semibold text-gray-900 text-lg">
-                          {role.title}
-                        </span>
-                        <div className="flex items-center gap-3">
-                          <div className="w-28 h-2.5 bg-gray-200 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-blue-500 rounded-full transition-all duration-700"
-                              style={{ width: `${role.probability * 100}%` }}
-                            />
-                          </div>
-                          <span className="text-base font-semibold text-gray-600 w-14">
-                            {Math.round(role.probability * 100)}%
-                          </span>
+                <div className="space-y-2">
+                  {analysis.career.potentialPaths[0].nextRoles.map((role, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
+                    >
+                      <span className="font-medium text-gray-900">
+                        {role.title}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-blue-500 rounded-full transition-all duration-700"
+                            style={{ width: `${role.probability * 100}%` }}
+                          />
                         </div>
+                        <span className="text-sm font-semibold text-gray-600 w-10">
+                          {Math.round(role.probability * 100)}%
+                        </span>
                       </div>
-                    )
-                  )}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
-        </CardContent>
-      </Card>
+        </div>
+      </Collapsible>
 
-      {/* Web Presence */}
-      <Card className="bg-white border-0 shadow-lg shadow-gray-200/50 rounded-2xl overflow-hidden">
-        <CardHeader className="pb-5 pt-7 px-7 border-b border-gray-100">
-          <CardTitle className="flex items-center gap-3 text-xl font-semibold text-gray-900 tracking-tight">
-            <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
-              <Globe className="w-5 h-5 text-white" />
-            </div>
-            Web Presence
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-7 pb-7 px-7 space-y-5">
+      {/* Red Flags - Collapsible */}
+      {derivedRedFlags.length > 0 && (
+        <Collapsible
+          title="Potential Concerns"
+          icon={<div className="w-10 h-10 bg-red-500 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/30"><AlertTriangle className="w-5 h-5 text-white" /></div>}
+          badge={
+            <span className="px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+              {derivedRedFlags.length} flags
+            </span>
+          }
+          defaultOpen={false}
+        >
           <div className="space-y-3">
+            {derivedRedFlags.map((flag, i) => (
+              <div key={i} className="p-4 bg-red-50 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                    flag.priority === "high" ? "bg-red-200 text-red-800" :
+                    flag.priority === "medium" ? "bg-yellow-200 text-yellow-800" :
+                    "bg-gray-200 text-gray-600"
+                  }`}>
+                    {flag.priority}
+                  </span>
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900">{flag.title}</p>
+                    <p className="text-sm text-gray-600 mt-1">{flag.whatSystemSees}</p>
+                    <p className="text-sm text-green-700 mt-2 font-medium">{flag.action}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Collapsible>
+      )}
+
+      {/* Recommendations - Collapsible */}
+      <Collapsible
+        title="Recommendations"
+        icon={<div className="w-10 h-10 bg-amber-400 rounded-xl flex items-center justify-center shadow-lg shadow-amber-400/30"><Lightbulb className="w-5 h-5 text-white" /></div>}
+        badge={
+          <span className="px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">
+            {analysis.recommendations.length} tips
+          </span>
+        }
+        defaultOpen={false}
+      >
+        <div className="space-y-5">
+          {analysis.recommendations.map((rec, i) => (
+            <div
+              key={i}
+              className="pl-4 border-l-4 border-blue-500 py-1"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span
+                  className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                    rec.priority === "high"
+                      ? "bg-red-100 text-red-700"
+                      : rec.priority === "medium"
+                        ? "bg-yellow-100 text-yellow-700"
+                        : "bg-gray-100 text-gray-600"
+                  }`}
+                >
+                  {rec.priority}
+                </span>
+                <span className="text-xs text-gray-500 uppercase tracking-wide">
+                  {rec.category}
+                </span>
+              </div>
+              <h4 className="font-semibold text-gray-900 mb-1">
+                {rec.title}
+              </h4>
+              <p className="text-sm text-gray-600 mb-3">
+                {rec.description}
+              </p>
+              <ul className="space-y-2">
+                {rec.actionItems.map((item, j) => (
+                  <li
+                    key={j}
+                    className="text-sm flex items-start gap-2 text-gray-700"
+                  >
+                    <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </Collapsible>
+
+      {/* Market Value - Collapsible, less prominent */}
+      <Collapsible
+        title="Salary Estimate"
+        icon={<div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/30"><DollarSign className="w-5 h-5 text-white" /></div>}
+        badge={
+          <span className="text-lg font-bold text-green-600">
+            {formatSalary(derivedSalaryEstimate.min)} - {formatSalary(derivedSalaryEstimate.max)}
+          </span>
+        }
+        defaultOpen={false}
+      >
+        <div className="space-y-4">
+          <div className="text-center py-4">
+            <div className="text-4xl font-bold text-gray-900 tracking-tight">
+              {formatSalary(derivedSalaryEstimate.min)} — {formatSalary(derivedSalaryEstimate.max)}
+            </div>
+            <p className="text-base text-gray-500 mt-2">
+              {resume.experience?.[0]?.title || "Professional"} · {derivedSalaryEstimate.location}
+            </p>
+          </div>
+          <div className="relative px-4">
+            <div className="h-3 bg-gray-100 rounded-full">
+              <div
+                className="absolute h-full bg-green-500 rounded-full transition-all duration-700"
+                style={{
+                  left: `${derivedSalaryEstimate.percentile.low}%`,
+                  width: `${derivedSalaryEstimate.percentile.high - derivedSalaryEstimate.percentile.low}%`,
+                }}
+              />
+            </div>
+            <div className="flex justify-between mt-2 text-sm text-gray-400">
+              <span>{formatSalary(derivedSalaryEstimate.min)}</span>
+              <span>{formatSalary(derivedSalaryEstimate.max)}</span>
+            </div>
+          </div>
+          <p className="text-center text-sm text-gray-500">
+            Your profile suggests <span className="font-semibold text-gray-900">{derivedSalaryEstimate.percentile.low}th–{derivedSalaryEstimate.percentile.high}th</span> percentile
+          </p>
+        </div>
+      </Collapsible>
+
+      {/* Web Presence - Collapsible */}
+      <Collapsible
+        title="Web Presence"
+        icon={<div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30"><Globe className="w-5 h-5 text-white" /></div>}
+        badge={
+          <span className="px-2.5 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
+            {webPresence.length} profiles
+          </span>
+        }
+        defaultOpen={false}
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
             {webPresence.map((presence, i) => (
               <a
                 key={i}
                 href={presence.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-start gap-4 p-5 bg-gray-50 rounded-xl hover:bg-blue-50 transition-all group"
+                className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl hover:bg-blue-50 transition-all group"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="px-3 py-1 bg-gray-200 text-gray-600 rounded-lg text-sm font-medium">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded text-xs font-medium">
                       {presence.platform}
                     </span>
                   </div>
-                  <p className="font-semibold text-gray-900 text-lg truncate group-hover:text-blue-600 transition-colors">
+                  <p className="font-medium text-gray-900 truncate group-hover:text-blue-600 transition-colors">
                     {presence.title || presence.url}
                   </p>
                   {presence.description && (
-                    <p className="text-base text-gray-600 truncate mt-1">
+                    <p className="text-sm text-gray-600 truncate mt-0.5">
                       {presence.description}
                     </p>
                   )}
                 </div>
-                <ExternalLink className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors flex-shrink-0 mt-1" />
+                <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors flex-shrink-0 mt-1" />
               </a>
             ))}
           </div>
 
           {analysis.webPresence.issues.length > 0 && (
-            <div className="p-5 bg-amber-50 rounded-xl">
-              <h4 className="font-semibold text-amber-800 mb-3 text-lg">
+            <div className="p-4 bg-amber-50 rounded-xl">
+              <h4 className="font-semibold text-amber-800 mb-2">
                 Issues Found
               </h4>
-              <ul className="space-y-2">
+              <ul className="space-y-1">
                 {analysis.webPresence.issues.map((issue, i) => (
-                  <li key={i} className="text-base text-amber-700">
+                  <li key={i} className="text-sm text-amber-700">
                     • {issue}
                   </li>
                 ))}
               </ul>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </Collapsible>
 
-      {/* Recommendations */}
-      <Card className="bg-white border-0 shadow-lg shadow-gray-200/50 rounded-2xl overflow-hidden">
-        <CardHeader className="pb-5 pt-7 px-7 border-b border-gray-100">
-          <CardTitle className="flex items-center gap-3 text-xl font-semibold text-gray-900 tracking-tight">
-            <div className="w-10 h-10 bg-amber-400 rounded-xl flex items-center justify-center shadow-lg shadow-amber-400/30">
-              <Lightbulb className="w-5 h-5 text-white" />
-            </div>
-            Recommendations
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-7 pb-7 px-7">
-          <div className="space-y-7">
-            {analysis.recommendations.map((rec, i) => (
-              <div
-                key={i}
-                className="pl-5 border-l-4 border-blue-500 py-2"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <span
-                    className={`px-3 py-1 rounded-lg text-sm font-semibold ${
-                      rec.priority === "high"
-                        ? "bg-red-100 text-red-700"
-                        : rec.priority === "medium"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {rec.priority}
-                  </span>
-                  <span className="text-sm text-gray-500 uppercase tracking-wide">
-                    {rec.category}
-                  </span>
-                </div>
-                <h4 className="font-semibold text-gray-900 mb-2 text-lg">
-                  {rec.title}
-                </h4>
-                <p className="text-base text-gray-600 mb-4">
-                  {rec.description}
-                </p>
-                <ul className="space-y-3">
-                  {rec.actionItems.map((item, j) => (
-                    <li
-                      key={j}
-                      className="text-base flex items-start gap-3 text-gray-700"
-                    >
-                      <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Deep Web Search Results - Collapsible, at bottom */}
+      {deepSearchResults && (
+        <Collapsible
+          title="Deep Web Search"
+          icon={<div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30"><FileText className="w-5 h-5 text-white" /></div>}
+          badge={
+            <span className={`px-2.5 py-1 rounded-full text-sm font-medium ${
+              deepSearchResults.summary.overallVisibility === "high" ? "bg-green-100 text-green-700" :
+              deepSearchResults.summary.overallVisibility === "medium" ? "bg-yellow-100 text-yellow-700" :
+              deepSearchResults.summary.overallVisibility === "low" ? "bg-orange-100 text-orange-700" :
+              "bg-red-100 text-red-700"
+            }`}>
+              {deepSearchResults.totalResults} results · {deepSearchResults.summary.overallVisibility} visibility
+            </span>
+          }
+          defaultOpen={false}
+        >
+          <WebSearchResults results={deepSearchResults} embedded={true} />
+        </Collapsible>
+      )}
     </div>
   );
 }

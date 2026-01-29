@@ -189,8 +189,10 @@ function calculateRelevance(result: SearchResult, searchName: string): number {
   // Recent date bonus
   if (result.date) {
     const dateStr = result.date.toLowerCase();
-    if (dateStr.includes("2024") || dateStr.includes("2025")) {
+    if (dateStr.includes("2025") || dateStr.includes("2026")) {
       score += 10;
+    } else if (dateStr.includes("2024")) {
+      score += 5;
     }
   }
 
@@ -200,26 +202,60 @@ function calculateRelevance(result: SearchResult, searchName: string): number {
 function identifyPlatform(url: string): string {
   const urlLower = url.toLowerCase();
 
+  // Social/Professional profiles
   if (urlLower.includes("linkedin.com")) return "linkedin";
   if (urlLower.includes("github.com")) return "github";
   if (urlLower.includes("twitter.com") || urlLower.includes("x.com")) return "twitter";
+  if (urlLower.includes("angellist.com") || urlLower.includes("wellfound.com")) return "angellist";
+  if (urlLower.includes("about.me")) return "aboutme";
+
+  // Content platforms
   if (urlLower.includes("medium.com")) return "medium";
   if (urlLower.includes("stackoverflow.com")) return "stackoverflow";
+  if (urlLower.includes("dev.to")) return "devto";
+  if (urlLower.includes("hashnode.com")) return "hashnode";
+  if (urlLower.includes("substack.com")) return "substack";
+
+  // Design/Creative
+  if (urlLower.includes("dribbble.com")) return "dribbble";
+  if (urlLower.includes("behance.net")) return "behance";
+
+  // Data Science
+  if (urlLower.includes("kaggle.com")) return "kaggle";
+
+  // Video/Audio
   if (urlLower.includes("youtube.com") || urlLower.includes("youtu.be")) return "youtube";
   if (urlLower.includes("spotify.com")) return "spotify";
   if (urlLower.includes("apple.com/podcasts")) return "apple_podcasts";
+  if (urlLower.includes("vimeo.com")) return "vimeo";
+
+  // Academic
   if (urlLower.includes("scholar.google.com")) return "google_scholar";
   if (urlLower.includes("researchgate.net")) return "researchgate";
+  if (urlLower.includes("academia.edu")) return "academia";
+  if (urlLower.includes("orcid.org")) return "orcid";
+
+  // Patents
   if (urlLower.includes("patents.google.com") || urlLower.includes("uspto.gov")) return "patents";
+
+  // Presentations
   if (urlLower.includes("slideshare.net")) return "slideshare";
   if (urlLower.includes("speakerdeck.com")) return "speakerdeck";
+
+  // Business
   if (urlLower.includes("crunchbase.com")) return "crunchbase";
+  if (urlLower.includes("pitchbook.com")) return "pitchbook";
+
+  // Major publications
   if (urlLower.includes("bloomberg.com")) return "bloomberg";
   if (urlLower.includes("forbes.com")) return "forbes";
   if (urlLower.includes("techcrunch.com")) return "techcrunch";
   if (urlLower.includes("wired.com")) return "wired";
   if (urlLower.includes("nytimes.com")) return "nytimes";
   if (urlLower.includes("wsj.com")) return "wsj";
+  if (urlLower.includes("businessinsider.com")) return "businessinsider";
+  if (urlLower.includes("reuters.com")) return "reuters";
+  if (urlLower.includes("bbc.com") || urlLower.includes("bbc.co.uk")) return "bbc";
 
   // Try to extract domain as platform
   try {
@@ -322,21 +358,53 @@ export async function deepWebSearch(
   if (context?.location) contextParts.push(context.location);
   const contextStr = contextParts.join(" ");
 
+  // Extract name parts for variations
+  const nameParts = name.split(/\s+/).filter(part => part.length > 1);
+  const firstName = nameParts[0] || "";
+  const lastName = nameParts[nameParts.length - 1] || "";
+  const middleName = nameParts.length > 2 ? nameParts[1] : "";
+
+  // Generate name variations for harder-to-find profiles
+  const nameVariations: string[] = [
+    name,
+    `${firstName} ${lastName}`,
+    ...(middleName ? [`${firstName} ${middleName} ${lastName}`, `${firstName} ${middleName[0]} ${lastName}`] : []),
+    `${firstName[0]} ${lastName}`,
+    `${firstName} ${lastName[0]}`,
+  ].filter((v, i, arr) => arr.indexOf(v) === i);
+
   // Define all search queries organized by category
   const searchQueries: Array<{
     query: string;
     category: CatalogedSearchResult["category"];
     priority: number;
   }> = [
-    // === PROFILE SEARCHES (Priority 1) ===
-    { query: `site:linkedin.com/in "${name}" ${contextStr}`, category: "profile", priority: 1 },
+    // === LINKEDIN DEEP SEARCHES (Priority 1) - Multiple variations ===
+    { query: `site:linkedin.com/in "${name}"`, category: "profile", priority: 1 },
+    { query: `site:linkedin.com/in "${firstName} ${lastName}" ${context?.company || ""}`, category: "profile", priority: 1 },
+    { query: `site:linkedin.com "${name}" ${context?.title || ""}`, category: "profile", priority: 1 },
+    { query: `linkedin "${name}" ${contextStr}`, category: "profile", priority: 1 },
+    ...(context?.company ? [{ query: `site:linkedin.com/in "${firstName}" "${lastName}" "${context.company}"`, category: "profile" as const, priority: 1 }] : []),
+    ...(context?.email ? [{ query: `site:linkedin.com "${context.email.split("@")[0]}"`, category: "profile" as const, priority: 1 }] : []),
+
+    // === OTHER PROFILE SEARCHES (Priority 1) ===
     { query: `site:github.com "${name}" ${contextStr}`, category: "profile", priority: 1 },
     { query: `site:twitter.com OR site:x.com "${name}" ${contextStr}`, category: "profile", priority: 1 },
+
+    // === EXTENDED PROFILE SEARCHES (Priority 2) ===
     { query: `site:medium.com "${name}"`, category: "profile", priority: 2 },
     { query: `site:stackoverflow.com/users "${name}"`, category: "profile", priority: 2 },
+    { query: `site:angellist.com "${name}"`, category: "profile", priority: 2 },
+    { query: `site:wellfound.com "${name}"`, category: "profile", priority: 2 },
+    { query: `site:about.me "${name}"`, category: "profile", priority: 2 },
+
+    // === DEEP PROFILE SEARCHES (Priority 3) ===
     { query: `site:dev.to "${name}"`, category: "profile", priority: 3 },
     { query: `site:hashnode.com "${name}"`, category: "profile", priority: 3 },
     { query: `site:substack.com "${name}"`, category: "profile", priority: 3 },
+    { query: `site:dribbble.com "${name}"`, category: "profile", priority: 3 },
+    { query: `site:behance.net "${name}"`, category: "profile", priority: 3 },
+    { query: `site:kaggle.com "${name}"`, category: "profile", priority: 3 },
 
     // === NEWS SEARCHES (Priority 1) ===
     // Note: News searches use a different endpoint
@@ -388,6 +456,31 @@ export async function deepWebSearch(
     // === GENERAL MENTIONS (Priority 3) ===
     { query: `"${name}" ${contextStr} -site:linkedin.com -site:facebook.com`, category: "mention", priority: 3 },
     { query: `"${name}" ${context?.title || ""} quoted OR said OR according to`, category: "mention", priority: 3 },
+
+    // === EXTRA DEEP SEARCHES FOR HARD-TO-FIND PROFILES (Priority 3) ===
+    ...(context?.email ? [
+      { query: `"${context.email}"`, category: "profile" as const, priority: 3 },
+      { query: `"${context.email.split("@")[0]}" ${lastName}`, category: "profile" as const, priority: 3 },
+    ] : []),
+    { query: `"${firstName} ${lastName}" bio OR biography ${context?.industry || ""}`, category: "mention", priority: 3 },
+    { query: `"${firstName} ${lastName}" profile OR about ${context?.company || ""}`, category: "profile", priority: 3 },
+    ...(nameVariations.length > 1 ? nameVariations.slice(1, 4).map(v => ({
+      query: `site:linkedin.com/in "${v}"`,
+      category: "profile" as const,
+      priority: 3,
+    })) : []),
+
+    // === INDUSTRY-SPECIFIC DEEP SEARCHES ===
+    ...(context?.industry ? [
+      { query: `"${name}" "${context.industry}" leader OR expert OR specialist`, category: "mention" as const, priority: 3 },
+      { query: `"${name}" "${context.industry}" interview OR feature`, category: "news" as const, priority: 3 },
+    ] : []),
+
+    // === COMPANY ASSOCIATION SEARCHES ===
+    ...(context?.company ? [
+      { query: `"${name}" "${context.company}" team OR leadership`, category: "press" as const, priority: 3 },
+      { query: `site:${context.company.toLowerCase().replace(/\s+/g, "")}.com "${firstName}" "${lastName}"`, category: "profile" as const, priority: 3 },
+    ] : []),
   ];
 
   // Execute priority 1 searches first (most important)
@@ -525,19 +618,26 @@ export async function deepWebSearch(
 function calculateVisibility(results: DeepSearchResults): "high" | "medium" | "low" | "minimal" {
   let score = 0;
 
-  // Profile presence
-  if (results.summary.hasLinkedIn) score += 10;
-  if (results.summary.hasGitHub) score += 5;
+  // Profile presence - LinkedIn is most important for professional visibility
+  if (results.summary.hasLinkedIn) score += 15;
+  if (results.summary.hasGitHub) score += 7;
   if (results.summary.hasTwitter) score += 5;
+
+  // Multiple profiles indicate strong presence
+  const uniquePlatforms = new Set(results.profiles.map(p => p.platform));
+  score += Math.min(uniquePlatforms.size * 3, 15);
 
   // News coverage
   score += Math.min(results.news.length * 3, 20);
 
-  // Publications
+  // Publications (high value for thought leadership)
   score += Math.min(results.publications.length * 5, 15);
 
   // Speaking engagements
   score += Math.min(results.speaking.length * 4, 12);
+
+  // Patents (high value)
+  score += Math.min(results.patents.length * 6, 12);
 
   // Awards
   score += Math.min(results.awards.length * 3, 9);
@@ -545,12 +645,18 @@ function calculateVisibility(results: DeepSearchResults): "high" | "medium" | "l
   // Press coverage
   score += Math.min(results.press.length * 3, 9);
 
+  // Video content
+  score += Math.min(results.videos.length * 2, 8);
+
+  // Open source
+  score += Math.min(results.opensource.length * 2, 8);
+
   // General mentions
   score += Math.min(results.mentions.length, 10);
 
-  if (score >= 50) return "high";
-  if (score >= 25) return "medium";
-  if (score >= 10) return "low";
+  if (score >= 60) return "high";
+  if (score >= 30) return "medium";
+  if (score >= 12) return "low";
   return "minimal";
 }
 
