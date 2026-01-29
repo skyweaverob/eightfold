@@ -200,79 +200,101 @@ function calculateRelevance(result: SearchResult, searchName: string): number {
 }
 
 function identifyPlatform(url: string): string {
-  const urlLower = url.toLowerCase();
-
-  // Social/Professional profiles
-  if (urlLower.includes("linkedin.com")) return "linkedin";
-  if (urlLower.includes("github.com")) return "github";
-  if (urlLower.includes("twitter.com") || urlLower.includes("x.com")) return "twitter";
-  if (urlLower.includes("angellist.com") || urlLower.includes("wellfound.com")) return "angellist";
-  if (urlLower.includes("about.me")) return "aboutme";
-
-  // Content platforms
-  if (urlLower.includes("medium.com")) return "medium";
-  if (urlLower.includes("stackoverflow.com")) return "stackoverflow";
-  if (urlLower.includes("dev.to")) return "devto";
-  if (urlLower.includes("hashnode.com")) return "hashnode";
-  if (urlLower.includes("substack.com")) return "substack";
-
-  // Design/Creative
-  if (urlLower.includes("dribbble.com")) return "dribbble";
-  if (urlLower.includes("behance.net")) return "behance";
-
-  // Data Science
-  if (urlLower.includes("kaggle.com")) return "kaggle";
-
-  // Video/Audio
-  if (urlLower.includes("youtube.com") || urlLower.includes("youtu.be")) return "youtube";
-  if (urlLower.includes("spotify.com")) return "spotify";
-  if (urlLower.includes("apple.com/podcasts")) return "apple_podcasts";
-  if (urlLower.includes("vimeo.com")) return "vimeo";
-
-  // Academic
-  if (urlLower.includes("scholar.google.com")) return "google_scholar";
-  if (urlLower.includes("researchgate.net")) return "researchgate";
-  if (urlLower.includes("academia.edu")) return "academia";
-  if (urlLower.includes("orcid.org")) return "orcid";
-
-  // Patents
-  if (urlLower.includes("patents.google.com") || urlLower.includes("uspto.gov")) return "patents";
-
-  // Presentations
-  if (urlLower.includes("slideshare.net")) return "slideshare";
-  if (urlLower.includes("speakerdeck.com")) return "speakerdeck";
-
-  // Business
-  if (urlLower.includes("crunchbase.com")) return "crunchbase";
-  if (urlLower.includes("pitchbook.com")) return "pitchbook";
-
-  // Major publications
-  if (urlLower.includes("bloomberg.com")) return "bloomberg";
-  if (urlLower.includes("forbes.com")) return "forbes";
-  if (urlLower.includes("techcrunch.com")) return "techcrunch";
-  if (urlLower.includes("wired.com")) return "wired";
-  if (urlLower.includes("nytimes.com")) return "nytimes";
-  if (urlLower.includes("wsj.com")) return "wsj";
-  if (urlLower.includes("businessinsider.com")) return "businessinsider";
-  if (urlLower.includes("reuters.com")) return "reuters";
-  if (urlLower.includes("bbc.com") || urlLower.includes("bbc.co.uk")) return "bbc";
-  if (urlLower.includes("spectator.com") || urlLower.includes("spectator.co.uk")) return "spectator";
-  if (urlLower.includes("theguardian.com") || urlLower.includes("guardian.co.uk")) return "guardian";
-  if (urlLower.includes("telegraph.co.uk")) return "telegraph";
-  if (urlLower.includes("thetimes.co.uk") || urlLower.includes("thetimes.com")) return "thetimes";
-  if (urlLower.includes("economist.com")) return "economist";
-  if (urlLower.includes("ft.com")) return "ft";
-  if (urlLower.includes("theatlantic.com")) return "atlantic";
-  if (urlLower.includes("newyorker.com")) return "newyorker";
-  if (urlLower.includes("politico.com") || urlLower.includes("politico.eu")) return "politico";
-
-  // Try to extract domain as platform
+  // Just extract the domain name - no hardcoded list
   try {
     const domain = new URL(url).hostname.replace("www.", "");
-    return domain.split(".")[0];
+    // Return the main part of the domain (e.g., "spectator" from "spectator.co.uk")
+    const parts = domain.split(".");
+    // Handle co.uk, com.au style domains
+    if (parts.length >= 2 && ["co", "com", "org", "net"].includes(parts[parts.length - 2])) {
+      return parts[parts.length - 3] || parts[0];
+    }
+    return parts[0];
   } catch {
     return "web";
   }
+}
+
+// Categorize result based on URL patterns and content - no hardcoded sites
+function categorizeResult(result: SearchResult): CatalogedSearchResult["category"] {
+  const url = result.link.toLowerCase();
+  const title = result.title.toLowerCase();
+  const snippet = result.snippet.toLowerCase();
+  const combined = `${url} ${title} ${snippet}`;
+
+  // Profile indicators
+  if (url.includes("/in/") || url.includes("/profile") || url.includes("/user") ||
+      url.includes("/people/") || url.includes("/author/") || url.includes("/writer/") ||
+      url.includes("/contributor/") || url.includes("/@") ||
+      combined.includes("profile") || combined.includes("about me")) {
+    return "profile";
+  }
+
+  // News indicators
+  if (url.includes("/news/") || url.includes("/article/") || url.includes("/story/") ||
+      combined.includes("reported") || combined.includes("announced") ||
+      combined.includes("according to") || combined.includes("news")) {
+    return "news";
+  }
+
+  // Publication/research indicators
+  if (combined.includes("paper") || combined.includes("research") ||
+      combined.includes("published") || combined.includes("journal") ||
+      combined.includes("study") || combined.includes("abstract") ||
+      url.includes("scholar") || url.includes("arxiv") || url.includes("doi.org")) {
+    return "publication";
+  }
+
+  // Speaking/conference indicators
+  if (combined.includes("speaker") || combined.includes("keynote") ||
+      combined.includes("conference") || combined.includes("summit") ||
+      combined.includes("presentation") || combined.includes("webinar") ||
+      combined.includes("talk") || combined.includes("panel")) {
+    return "speaking";
+  }
+
+  // Patent indicators
+  if (combined.includes("patent") || combined.includes("inventor") ||
+      url.includes("patent")) {
+    return "patent";
+  }
+
+  // Award indicators
+  if (combined.includes("award") || combined.includes("honored") ||
+      combined.includes("recognized") || combined.includes("winner") ||
+      combined.includes("top ") || combined.includes("best ")) {
+    return "award";
+  }
+
+  // Podcast indicators
+  if (combined.includes("podcast") || combined.includes("episode") ||
+      url.includes("podcast") || url.includes("spotify") ||
+      url.includes("apple.com") && combined.includes("listen")) {
+    return "podcast";
+  }
+
+  // Video indicators
+  if (url.includes("youtube") || url.includes("vimeo") ||
+      combined.includes("video") || combined.includes("watch")) {
+    return "video";
+  }
+
+  // Open source indicators
+  if (url.includes("github") || url.includes("gitlab") ||
+      combined.includes("repository") || combined.includes("open source") ||
+      combined.includes("contributor") || combined.includes("commit")) {
+    return "opensource";
+  }
+
+  // Press/company news indicators
+  if (combined.includes("appointed") || combined.includes("joined") ||
+      combined.includes("hired") || combined.includes("promoted") ||
+      combined.includes("ceo") || combined.includes("founder")) {
+    return "press";
+  }
+
+  // Default to mention
+  return "mention";
 }
 
 async function executeSearch(
@@ -382,179 +404,86 @@ export async function deepWebSearch(
     `${firstName} ${lastName[0]}`,
   ].filter((v, i, arr) => arr.indexOf(v) === i);
 
-  // Define all search queries organized by category
-  const searchQueries: Array<{
-    query: string;
-    category: CatalogedSearchResult["category"];
-    priority: number;
-  }> = [
-    // === LINKEDIN DEEP SEARCHES (Priority 1) - Multiple variations ===
-    { query: `site:linkedin.com/in "${name}"`, category: "profile", priority: 1 },
-    { query: `site:linkedin.com/in "${firstName} ${lastName}" ${context?.company || ""}`, category: "profile", priority: 1 },
-    { query: `site:linkedin.com "${name}" ${context?.title || ""}`, category: "profile", priority: 1 },
-    { query: `linkedin "${name}" ${contextStr}`, category: "profile", priority: 1 },
-    ...(context?.company ? [{ query: `site:linkedin.com/in "${firstName}" "${lastName}" "${context.company}"`, category: "profile" as const, priority: 1 }] : []),
-    ...(context?.email ? [{ query: `site:linkedin.com "${context.email.split("@")[0]}"`, category: "profile" as const, priority: 1 }] : []),
+  // SIMPLE APPROACH: Just Google the person and learn from whatever comes back
+  // Trust Google to surface what's relevant - don't over-engineer with site-specific searches
 
-    // === OTHER PROFILE SEARCHES (Priority 1) ===
-    { query: `site:github.com "${name}" ${contextStr}`, category: "profile", priority: 1 },
-    { query: `site:twitter.com "${name}" ${contextStr}`, category: "profile", priority: 1 },
-    { query: `site:x.com "${name}" ${contextStr}`, category: "profile", priority: 1 },
+  const searchQueries: string[] = [
+    // Primary searches - just the person's name with context
+    `"${name}"`,
+    `"${name}" ${contextStr}`.trim(),
+    `"${firstName} ${lastName}"`,
 
-    // === GENERAL WEB PROFILE SEARCH (Priority 1) - catches author pages, about pages ===
-    { query: `"${name}" ${contextStr}`, category: "profile", priority: 1 },
+    // Add company context if available
+    ...(context?.company ? [`"${name}" "${context.company}"`] : []),
 
-    // === EXTENDED PROFILE SEARCHES (Priority 2) ===
-    { query: `site:medium.com "${name}"`, category: "profile", priority: 2 },
-    { query: `site:stackoverflow.com/users "${name}"`, category: "profile", priority: 2 },
-    { query: `site:angellist.com "${name}"`, category: "profile", priority: 2 },
-    { query: `site:wellfound.com "${name}"`, category: "profile", priority: 2 },
-    { query: `site:about.me "${name}"`, category: "profile", priority: 2 },
+    // Add title context if available
+    ...(context?.title ? [`"${name}" ${context.title}`] : []),
 
-    // === DEEP PROFILE SEARCHES (Priority 3) ===
-    { query: `site:dev.to "${name}"`, category: "profile", priority: 3 },
-    { query: `site:hashnode.com "${name}"`, category: "profile", priority: 3 },
-    { query: `site:substack.com "${name}"`, category: "profile", priority: 3 },
-    { query: `site:dribbble.com "${name}"`, category: "profile", priority: 3 },
-    { query: `site:behance.net "${name}"`, category: "profile", priority: 3 },
-    { query: `site:kaggle.com "${name}"`, category: "profile", priority: 3 },
+    // LinkedIn specifically (most important for professional)
+    `"${name}" site:linkedin.com`,
 
-    // === AUTHOR/WRITER/CONTRIBUTOR PROFILE SEARCHES (Priority 2) - GENERIC ===
-    { query: `"${name}" author bio`, category: "profile", priority: 2 },
-    { query: `"${name}" writer contributor`, category: "profile", priority: 2 },
-    { query: `"${name}" columnist journalist`, category: "profile", priority: 2 },
-    { query: `inurl:author "${name}"`, category: "profile", priority: 2 },
-    { query: `inurl:writer "${name}"`, category: "profile", priority: 3 },
-    { query: `inurl:contributor "${name}"`, category: "profile", priority: 3 },
-    { query: `"${name}" "about the author"`, category: "profile", priority: 3 },
-
-    // === NEWS SEARCHES (Priority 1) ===
-    // Note: News searches use a different endpoint
-
-    // === PUBLICATION SEARCHES (Priority 2) ===
-    { query: `site:scholar.google.com author:"${name}"`, category: "publication", priority: 2 },
-    { query: `site:researchgate.net "${name}"`, category: "publication", priority: 2 },
-    { query: `site:arxiv.org author:"${name}"`, category: "publication", priority: 2 },
-    { query: `site:ieee.org author:"${name}"`, category: "publication", priority: 3 },
-    { query: `site:acm.org author:"${name}"`, category: "publication", priority: 3 },
-    { query: `"${name}" ${contextStr} published OR publication OR paper OR research`, category: "publication", priority: 3 },
-
-    // === SPEAKING ENGAGEMENTS (Priority 2) ===
-    { query: `"${name}" speaker OR keynote OR conference OR summit ${contextStr}`, category: "speaking", priority: 2 },
-    { query: `site:slideshare.net "${name}"`, category: "speaking", priority: 2 },
-    { query: `site:speakerdeck.com "${name}"`, category: "speaking", priority: 2 },
-    { query: `"${name}" TEDx OR TED talk`, category: "speaking", priority: 3 },
-    { query: `"${name}" webinar OR panel OR presentation ${context?.industry || ""}`, category: "speaking", priority: 3 },
-
-    // === PATENTS (Priority 3) ===
-    { query: `site:patents.google.com inventor:"${name}"`, category: "patent", priority: 3 },
-    { query: `"${name}" patent inventor ${contextStr}`, category: "patent", priority: 3 },
-
-    // === AWARDS & RECOGNITION (Priority 2) ===
-    { query: `"${name}" award OR awarded OR recognized OR honored ${contextStr}`, category: "award", priority: 2 },
-    { query: `"${name}" "top" OR "best" OR "leading" ${context?.title || ""} ${context?.industry || ""}`, category: "award", priority: 3 },
-    { query: `"${name}" Forbes OR Fortune OR Inc OR "Business Insider" list`, category: "award", priority: 3 },
-
-    // === PODCAST APPEARANCES (Priority 2 - elevated importance) ===
-    { query: `"${name}" podcast guest OR interview ${contextStr}`, category: "podcast", priority: 2 },
-    { query: `site:spotify.com "${name}" podcast`, category: "podcast", priority: 2 },
-    { query: `site:podcasts.apple.com "${name}"`, category: "podcast", priority: 2 },
-    { query: `site:apple.com/podcasts "${name}"`, category: "podcast", priority: 2 },
-    { query: `"${name}" episode podcast`, category: "podcast", priority: 3 },
-
-    // === VIDEO CONTENT (Priority 2) ===
-    { query: `site:youtube.com "${name}" ${contextStr}`, category: "video", priority: 2 },
-    { query: `"${name}" interview OR talk OR presentation video ${context?.industry || ""}`, category: "video", priority: 3 },
-
-    // === OPEN SOURCE (Priority 2) ===
-    { query: `site:github.com "${name}" contributor OR author ${context?.skills?.slice(0, 3).join(" OR ") || ""}`, category: "opensource", priority: 2 },
-    { query: `"${name}" open source OR opensource contribution ${context?.skills?.slice(0, 2).join(" ") || ""}`, category: "opensource", priority: 3 },
-    { query: `site:npmjs.com "${name}"`, category: "opensource", priority: 3 },
-    { query: `site:pypi.org "${name}"`, category: "opensource", priority: 3 },
-
-    // === PRESS & COMPANY NEWS (Priority 2) ===
-    { query: `"${name}" ${context?.company || ""} announced OR appointed OR joined OR promoted`, category: "press", priority: 2 },
-    { query: `site:crunchbase.com "${name}"`, category: "press", priority: 2 },
-    { query: `"${name}" ${context?.company || ""} press release OR announcement`, category: "press", priority: 3 },
-
-    // === GENERAL MENTIONS (Priority 3) ===
-    { query: `"${name}" ${contextStr} -site:linkedin.com -site:facebook.com`, category: "mention", priority: 3 },
-    { query: `"${name}" ${context?.title || ""} quoted OR said OR according to`, category: "mention", priority: 3 },
-
-    // === EXTRA DEEP SEARCHES FOR HARD-TO-FIND PROFILES (Priority 3) ===
-    ...(context?.email ? [
-      { query: `"${context.email}"`, category: "profile" as const, priority: 3 },
-      { query: `"${context.email.split("@")[0]}" ${lastName}`, category: "profile" as const, priority: 3 },
-    ] : []),
-    { query: `"${firstName} ${lastName}" bio OR biography ${context?.industry || ""}`, category: "mention", priority: 3 },
-    { query: `"${firstName} ${lastName}" profile OR about ${context?.company || ""}`, category: "profile", priority: 3 },
-    ...(nameVariations.length > 1 ? nameVariations.slice(1, 4).map(v => ({
-      query: `site:linkedin.com/in "${v}"`,
-      category: "profile" as const,
-      priority: 3,
-    })) : []),
-
-    // === INDUSTRY-SPECIFIC DEEP SEARCHES ===
-    ...(context?.industry ? [
-      { query: `"${name}" "${context.industry}" leader OR expert OR specialist`, category: "mention" as const, priority: 3 },
-      { query: `"${name}" "${context.industry}" interview OR feature`, category: "news" as const, priority: 3 },
-    ] : []),
-
-    // === COMPANY ASSOCIATION SEARCHES ===
-    ...(context?.company ? [
-      { query: `"${name}" "${context.company}" team OR leadership`, category: "press" as const, priority: 3 },
-      { query: `site:${context.company.toLowerCase().replace(/\s+/g, "")}.com "${firstName}" "${lastName}"`, category: "profile" as const, priority: 3 },
-    ] : []),
+    // Social media
+    `"${name}" site:twitter.com OR site:x.com`,
   ];
 
-  // Execute priority 1 searches first (most important)
-  const priority1Searches = searchQueries.filter((s) => s.priority === 1);
-  const priority2Searches = searchQueries.filter((s) => s.priority === 2);
-  const priority3Searches = searchQueries.filter((s) => s.priority === 3);
+  // Remove duplicates and empty queries
+  const uniqueQueries = [...new Set(searchQueries.filter(q => q.trim().length > 3))];
 
-  console.log(`Starting deep web search for "${name}" with ${searchQueries.length} queries...`);
+  console.log(`Starting web search for "${name}" with ${uniqueQueries.length} queries...`);
 
-  // Execute priority 1 searches in parallel
-  const p1Results = await Promise.all(
-    priority1Searches.map((s) => executeSearch(s.query, s.category, name, 5))
-  );
-  results.searchesPerformed += priority1Searches.length;
+  // Execute all searches and get raw results
+  // Get 30+ results per search (3 pages worth)
+  const allRawResults: SearchResult[] = [];
 
-  // Execute news search
-  const newsResults = await executeNewsSearch(`"${name}" ${contextStr}`, name, 15);
-  results.news.push(...newsResults);
-  results.searchesPerformed += 1;
-
-  // Also search news without context for broader coverage
-  if (contextStr) {
-    const broadNewsResults = await executeNewsSearch(`"${name}"`, name, 10);
-    // Add only unique URLs
-    const existingUrls = new Set(results.news.map((r) => r.url));
-    results.news.push(...broadNewsResults.filter((r) => !existingUrls.has(r.url)));
-    results.searchesPerformed += 1;
+  for (const query of uniqueQueries) {
+    try {
+      const searchResults = await searchWeb(query, 40); // 3-4 pages of results
+      allRawResults.push(...searchResults);
+      results.searchesPerformed += 1;
+    } catch (error) {
+      console.error(`Search failed for: ${query}`, error);
+    }
   }
 
-  // Execute priority 2 searches in parallel
-  const p2Results = await Promise.all(
-    priority2Searches.map((s) => executeSearch(s.query, s.category, name, 5))
-  );
-  results.searchesPerformed += priority2Searches.length;
+  // Also do a news search
+  try {
+    const newsResults = await searchNews(`"${name}"`);
+    for (const news of newsResults) {
+      allRawResults.push(news);
+    }
+    results.searchesPerformed += 1;
+  } catch (error) {
+    console.error("News search failed:", error);
+  }
 
-  // Execute priority 3 searches in parallel (lower priority, fewer results each)
-  const p3Results = await Promise.all(
-    priority3Searches.map((s) => executeSearch(s.query, s.category, name, 3))
-  );
-  results.searchesPerformed += priority3Searches.length;
-
-  // Combine all results
-  const allSearchResults = [...p1Results, ...p2Results, ...p3Results].flat();
-
-  // Deduplicate by URL and categorize
+  // Deduplicate by URL
   const seenUrls = new Set<string>();
+  const uniqueResults: SearchResult[] = [];
+  for (const result of allRawResults) {
+    if (!seenUrls.has(result.link)) {
+      seenUrls.add(result.link);
+      uniqueResults.push(result);
+    }
+  }
 
+  // Now categorize each result based on URL and content
+  const allSearchResults: CatalogedSearchResult[] = uniqueResults.map(result => {
+    const category = categorizeResult(result);
+    return {
+      category,
+      platform: identifyPlatform(result.link),
+      url: result.link,
+      title: result.title,
+      snippet: result.snippet,
+      date: result.date,
+      source: result.source,
+      relevanceScore: calculateRelevance(result, name),
+      searchQuery: name,
+    };
+  });
+
+  // Sort into categories
   for (const result of allSearchResults) {
-    if (seenUrls.has(result.url)) continue;
-    seenUrls.add(result.url);
 
     switch (result.category) {
       case "profile":
