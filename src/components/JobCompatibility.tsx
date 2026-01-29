@@ -19,7 +19,17 @@ function formatSalary(amount: number): string {
   if (amount >= 1000) {
     return `$${Math.round(amount / 1000)}K`;
   }
-  return `$${amount.toLocaleString()}`;
+  return `$${Math.round(amount).toLocaleString()}`;
+}
+
+function formatSalaryRange(minVal: number, maxVal: number): string {
+  const formattedMin = formatSalary(minVal);
+  const formattedMax = formatSalary(maxVal);
+
+  if (formattedMin === formattedMax || Math.abs(maxVal - minVal) < 1000) {
+    return formattedMin;
+  }
+  return `${formattedMin} – ${formattedMax}`;
 }
 
 export function JobCompatibility({
@@ -96,8 +106,11 @@ export function JobCompatibility({
         </p>
         {(job.salaryMin || job.salaryMax) && (
           <p className="text-base text-gray-400 mt-2">
-            ${job.salaryMin?.toLocaleString() || "?"} – $
-            {job.salaryMax?.toLocaleString() || "?"}
+            {job.salaryMin && job.salaryMax
+              ? formatSalaryRange(job.salaryMin, job.salaryMax)
+              : job.salaryMin
+                ? formatSalary(job.salaryMin)
+                : formatSalary(job.salaryMax!)}
           </p>
         )}
       </div>
@@ -164,7 +177,7 @@ export function JobCompatibility({
               </h4>
               <div className="text-center mb-5">
                 <div className="text-3xl font-bold text-gray-900 tracking-tight">
-                  {formatSalary(compatibility.salaryLeverage.targetLow)} – {formatSalary(compatibility.salaryLeverage.targetHigh)}
+                  {formatSalaryRange(compatibility.salaryLeverage.targetLow, compatibility.salaryLeverage.targetHigh)}
                 </div>
               </div>
               <div className="relative px-4">

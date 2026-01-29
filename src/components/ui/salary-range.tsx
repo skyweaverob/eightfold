@@ -20,7 +20,17 @@ function formatSalary(amount: number): string {
   if (amount >= 1000) {
     return `$${Math.round(amount / 1000)}K`;
   }
-  return `$${amount.toLocaleString()}`;
+  return `$${Math.round(amount).toLocaleString()}`;
+}
+
+function formatSalaryRange(minVal: number, maxVal: number): string {
+  const formattedMin = formatSalary(minVal);
+  const formattedMax = formatSalary(maxVal);
+
+  if (formattedMin === formattedMax || Math.abs(maxVal - minVal) < 1000) {
+    return formattedMin;
+  }
+  return `${formattedMin} — ${formattedMax}`;
 }
 
 export function SalaryRange({
@@ -49,7 +59,7 @@ export function SalaryRange({
       {/* Main salary display */}
       <div className="text-center mb-6">
         <div className="text-5xl font-bold text-gray-900 tracking-tight">
-          {formatSalary(targetMin || min)} — {formatSalary(targetMax || max)}
+          {formatSalaryRange(targetMin || min, targetMax || max)}
         </div>
         {location && (
           <div className="text-base text-gray-500 mt-2">

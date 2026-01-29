@@ -42,7 +42,18 @@ function formatSalary(amount: number): string {
   if (amount >= 1000) {
     return `$${Math.round(amount / 1000)}K`;
   }
-  return `$${amount.toLocaleString()}`;
+  return `$${Math.round(amount).toLocaleString()}`;
+}
+
+function formatSalaryRange(min: number, max: number): string {
+  const formattedMin = formatSalary(min);
+  const formattedMax = formatSalary(max);
+
+  // If min and max are the same (or very close), show single value
+  if (formattedMin === formattedMax || Math.abs(max - min) < 1000) {
+    return formattedMin;
+  }
+  return `${formattedMin} – ${formattedMax}`;
 }
 
 export function AnalysisDashboard({
@@ -386,7 +397,7 @@ export function AnalysisDashboard({
         icon={<div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/30"><DollarSign className="w-5 h-5 text-white" /></div>}
         badge={
           <span className="text-lg font-bold text-green-600">
-            {formatSalary(derivedSalaryEstimate.min)} - {formatSalary(derivedSalaryEstimate.max)}
+            {formatSalaryRange(derivedSalaryEstimate.min, derivedSalaryEstimate.max)}
           </span>
         }
         defaultOpen={false}
@@ -394,7 +405,7 @@ export function AnalysisDashboard({
         <div className="space-y-4">
           <div className="text-center py-4">
             <div className="text-4xl font-bold text-gray-900 tracking-tight">
-              {formatSalary(derivedSalaryEstimate.min)} — {formatSalary(derivedSalaryEstimate.max)}
+              {formatSalaryRange(derivedSalaryEstimate.min, derivedSalaryEstimate.max)}
             </div>
             <p className="text-base text-gray-500 mt-2">
               {resume.experience?.[0]?.title || "Professional"} · {derivedSalaryEstimate.location}
