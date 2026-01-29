@@ -53,24 +53,24 @@ export function Collapsible({
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "w-full flex items-center justify-between p-6 text-left transition-colors hover:bg-gray-50",
+          "w-full flex items-center justify-between p-4 md:p-6 text-left transition-colors hover:bg-gray-50",
           headerClassName
         )}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
           {icon && (
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0 [&>div]:w-8 [&>div]:h-8 md:[&>div]:w-10 md:[&>div]:h-10 [&_svg]:w-4 [&_svg]:h-4 md:[&_svg]:w-5 md:[&_svg]:h-5">
               {icon}
             </div>
           )}
-          <div className="flex items-center gap-3">
-            <h3 className="text-xl font-semibold text-gray-900 tracking-tight">{title}</h3>
-            {badge}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 min-w-0">
+            <h3 className="text-base md:text-xl font-semibold text-gray-900 tracking-tight">{title}</h3>
+            {badge && <div className="flex-shrink-0">{badge}</div>}
           </div>
         </div>
         <ChevronDown
           className={cn(
-            "w-5 h-5 text-gray-400 transition-transform duration-300 ease-out",
+            "w-4 h-4 md:w-5 md:h-5 text-gray-400 transition-transform duration-300 ease-out flex-shrink-0 ml-2",
             isOpen && "rotate-180"
           )}
         />
@@ -84,7 +84,7 @@ export function Collapsible({
           isOpen && "opacity-100"
         )}
       >
-        <div className="px-6 pb-6">
+        <div className="px-4 md:px-6 pb-4 md:pb-6">
           {children}
         </div>
       </div>

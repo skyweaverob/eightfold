@@ -45,16 +45,16 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
               {/* Step circle */}
               <div
                 className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-medium transition-all duration-200",
+                  "w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[11px] md:text-[13px] font-medium transition-all duration-200",
                   isComplete && "bg-green-600 text-white",
                   isCurrent && "bg-blue-600 text-white",
                   isPending && "bg-gray-100 text-gray-400"
                 )}
               >
                 {isComplete ? (
-                  <Check className="w-4 h-4" />
+                  <Check className="w-3 h-3 md:w-4 md:h-4" />
                 ) : isCurrent ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
                 ) : (
                   stepNumber
                 )}

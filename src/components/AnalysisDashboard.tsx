@@ -93,57 +93,57 @@ export function AnalysisDashboard({
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Job Compatibility Search - FIRST AND PROMINENT */}
       <Card className="border-0 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg shadow-blue-100/50 rounded-2xl overflow-hidden">
-        <CardHeader className="pb-5 pt-7 px-7">
-          <CardTitle className="flex items-center gap-3 text-2xl font-semibold text-gray-900 tracking-tight">
-            <div className="w-11 h-11 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <Search className="w-6 h-6 text-white" />
+        <CardHeader className="pb-4 md:pb-5 pt-5 md:pt-7 px-4 md:px-7">
+          <CardTitle className="flex items-center gap-2 md:gap-3 text-lg md:text-2xl font-semibold text-gray-900 tracking-tight">
+            <div className="w-9 h-9 md:w-11 md:h-11 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 flex-shrink-0">
+              <Search className="w-5 h-5 md:w-6 md:h-6 text-white" />
             </div>
             Check Job Compatibility
           </CardTitle>
-          <p className="text-base text-gray-600 mt-2 ml-14">
-            Search for roles to see your fit score, salary leverage, and <span className="font-semibold text-blue-600">how HR sees you</span>
+          <p className="text-sm md:text-base text-gray-600 mt-1.5 md:mt-2 ml-11 md:ml-14">
+            Search for roles to see your fit score and <span className="font-semibold text-blue-600">how HR sees you</span>
           </p>
         </CardHeader>
-        <CardContent className="px-7 pb-7">
+        <CardContent className="px-4 md:px-7 pb-5 md:pb-7">
           <JobSearch
             profileAnalysis={analysis}
             resume={resume}
             marketValue={derivedSalaryEstimate}
           />
           {/* HR View Callout */}
-          <div className="mt-5 p-4 bg-white/70 rounded-xl border border-blue-200 flex items-center gap-3">
-            <Eye className="w-5 h-5 text-blue-600" />
-            <p className="text-sm text-gray-600">
-              <span className="font-semibold text-gray-900">Pro tip:</span> After selecting a job, toggle to <span className="font-semibold text-blue-600">HR View</span> to see exactly how recruiters evaluate your profile
+          <div className="mt-4 md:mt-5 p-3 md:p-4 bg-white/70 rounded-xl border border-blue-200 flex items-start md:items-center gap-2 md:gap-3">
+            <Eye className="w-4 h-4 md:w-5 md:h-5 text-blue-600 flex-shrink-0 mt-0.5 md:mt-0" />
+            <p className="text-xs md:text-sm text-gray-600">
+              <span className="font-semibold text-gray-900">Pro tip:</span> Toggle <span className="font-semibold text-blue-600">HR View</span> to see how recruiters evaluate you
             </p>
           </div>
         </CardContent>
       </Card>
 
       {/* Quick Stats Row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 md:gap-4">
         <Card className="bg-white border-0 shadow-md shadow-gray-200/50 rounded-xl overflow-hidden">
-          <CardContent className="py-5 text-center">
-            <div className="text-3xl font-bold text-blue-500 mb-1 tracking-tight">
+          <CardContent className="py-3 md:py-5 px-2 md:px-4 text-center">
+            <div className="text-2xl md:text-3xl font-bold text-blue-500 mb-0.5 md:mb-1 tracking-tight">
               {analysis.marketPosition.overallScore}
             </div>
-            <div className="text-sm font-medium text-gray-500">Market Score</div>
+            <div className="text-xs md:text-sm font-medium text-gray-500">Score</div>
           </CardContent>
         </Card>
         <Card className="bg-white border-0 shadow-md shadow-gray-200/50 rounded-xl overflow-hidden">
-          <CardContent className="py-5 text-center">
-            <div className="text-3xl font-bold text-gray-900 mb-1 tracking-tight">
+          <CardContent className="py-3 md:py-5 px-2 md:px-4 text-center">
+            <div className="text-2xl md:text-3xl font-bold text-gray-900 mb-0.5 md:mb-1 tracking-tight">
               {analysis.career.yearsOfExperience}
             </div>
-            <div className="text-sm font-medium text-gray-500">Years Exp</div>
+            <div className="text-xs md:text-sm font-medium text-gray-500">Years</div>
           </CardContent>
         </Card>
         <Card className="bg-white border-0 shadow-md shadow-gray-200/50 rounded-xl overflow-hidden">
-          <CardContent className="py-5 text-center">
-            <div className="text-3xl font-bold text-green-500 mb-1 tracking-tight">
+          <CardContent className="py-3 md:py-5 px-2 md:px-4 text-center">
+            <div className="text-2xl md:text-3xl font-bold text-green-500 mb-0.5 md:mb-1 tracking-tight">
               {formatSalary(derivedSalaryEstimate.median)}
             </div>
-            <div className="text-sm font-medium text-gray-500">Est. Salary</div>
+            <div className="text-xs md:text-sm font-medium text-gray-500">Salary</div>
           </CardContent>
         </Card>
       </div>

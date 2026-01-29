@@ -64,7 +64,7 @@ export function FileUpload({
     <div className="w-full max-w-lg mx-auto">
       <div
         className={cn(
-          "relative border-2 border-dashed rounded-2xl p-14 transition-all duration-300",
+          "relative border-2 border-dashed rounded-2xl p-8 md:p-14 transition-all duration-300",
           dragActive
             ? "border-blue-500 bg-blue-50 scale-[1.02]"
             : "border-gray-200 hover:border-blue-400 hover:bg-gray-50/50",
@@ -84,17 +84,17 @@ export function FileUpload({
           disabled={isLoading}
         />
 
-        <div className="flex flex-col items-center justify-center space-y-5 text-center">
+        <div className="flex flex-col items-center justify-center space-y-4 md:space-y-5 text-center">
           {selectedFile ? (
             <>
-              <div className="w-16 h-16 rounded-2xl bg-green-100 flex items-center justify-center shadow-lg shadow-green-200/50">
-                <FileText className="w-8 h-8 text-green-600" />
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-green-100 flex items-center justify-center shadow-lg shadow-green-200/50">
+                <FileText className="w-7 h-7 md:w-8 md:h-8 text-green-600" />
               </div>
               <div>
-                <p className="text-xl font-semibold text-gray-900 tracking-tight">
+                <p className="text-lg md:text-xl font-semibold text-gray-900 tracking-tight break-all px-2">
                   {selectedFile.name}
                 </p>
-                <p className="text-base text-gray-500 mt-1">
+                <p className="text-sm md:text-base text-gray-500 mt-1">
                   {(selectedFile.size / 1024).toFixed(1)} KB
                 </p>
               </div>
@@ -110,18 +110,18 @@ export function FileUpload({
             </>
           ) : (
             <>
-              <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center">
-                <Upload className="w-8 h-8 text-gray-500" />
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gray-100 flex items-center justify-center">
+                <Upload className="w-7 h-7 md:w-8 md:h-8 text-gray-500" />
               </div>
               <div>
-                <p className="text-xl font-semibold text-gray-900 tracking-tight">
+                <p className="text-lg md:text-xl font-semibold text-gray-900 tracking-tight">
                   Drop your resume here
                 </p>
-                <p className="text-base text-gray-500 mt-2">
-                  or click to browse
+                <p className="text-sm md:text-base text-gray-500 mt-1 md:mt-2">
+                  or tap to browse
                 </p>
               </div>
-              <p className="text-sm text-gray-400 font-medium">
+              <p className="text-xs md:text-sm text-gray-400 font-medium">
                 PDF only
               </p>
             </>

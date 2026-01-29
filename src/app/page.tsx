@@ -144,14 +144,14 @@ export default function Home() {
           </header>
         )}
 
-        <main className="flex-1 flex flex-col items-center justify-center px-6 py-16">
+        <main className="flex-1 flex flex-col items-center justify-center px-4 md:px-6 py-8 md:py-16">
           {!isLoading ? (
             // Upload Screen - Pure focus
-            <div className="w-full max-w-lg text-center">
-              <h1 className="text-5xl font-bold text-gray-900 mb-3 tracking-tight">
+            <div className="w-full max-w-lg text-center px-4">
+              <h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-2 md:mb-3 tracking-tight">
                 Box Breaker
               </h1>
-              <p className="text-xl text-gray-500 mb-14 font-normal">
+              <p className="text-lg md:text-xl text-gray-500 mb-8 md:mb-14 font-normal">
                 Break HR&apos;s Black Box.
               </p>
 
@@ -165,20 +165,20 @@ export default function Home() {
             </div>
           ) : (
             // Analyzing Screen
-            <div className="w-full max-w-xl text-center">
-              <h2 className="text-3xl font-semibold text-gray-900 mb-10 tracking-tight">
+            <div className="w-full max-w-xl text-center px-4">
+              <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-6 md:mb-10 tracking-tight">
                 Breaking the black box
               </h2>
 
-              <Stepper steps={STEPS} currentStep={currentStepNum} className="mb-10" />
+              <Stepper steps={STEPS} currentStep={currentStepNum} className="mb-6 md:mb-10" />
 
-              <div className="py-10">
-                <Loader2 className="w-10 h-10 animate-spin text-blue-500 mx-auto mb-5" />
-                <p className="text-xl font-medium text-gray-900">
+              <div className="py-6 md:py-10">
+                <Loader2 className="w-8 h-8 md:w-10 md:h-10 animate-spin text-blue-500 mx-auto mb-4 md:mb-5" />
+                <p className="text-lg md:text-xl font-medium text-gray-900">
                   {currentMessage}
                 </p>
                 {currentDetail && (
-                  <p className="text-base text-gray-500 mt-3">
+                  <p className="text-sm md:text-base text-gray-500 mt-2 md:mt-3">
                     {currentDetail}
                   </p>
                 )}
@@ -202,30 +202,33 @@ export default function Home() {
   return (
     <div className="min-h-screen gradient-subtle">
       {/* Header with identity */}
-      <header className="py-5 border-b border-gray-100 sticky top-0 glass z-50">
-        <div className="container mx-auto px-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
+      <header className="py-3 md:py-5 border-b border-gray-100 sticky top-0 glass z-50">
+        <div className="container mx-auto px-4 md:px-6 flex items-center justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base md:text-xl font-semibold text-gray-900 tracking-tight truncate">
               {result.parsedResume.fullName || "Box Breaker"}
             </h1>
             {result.parsedResume.email && (
-              <p className="text-sm text-gray-500 mt-0.5">
+              <p className="text-xs md:text-sm text-gray-500 mt-0.5 truncate">
                 {result.parsedResume.email}
-                {result.parsedResume.location && ` · ${result.parsedResume.location}`}
+                <span className="hidden sm:inline">
+                  {result.parsedResume.location && ` · ${result.parsedResume.location}`}
+                </span>
               </p>
             )}
           </div>
           <button
             onClick={handleReset}
-            className="flex items-center gap-2 text-base text-gray-500 hover:text-gray-900 transition-colors font-medium"
+            className="flex items-center gap-1 md:gap-2 text-sm md:text-base text-gray-500 hover:text-gray-900 transition-colors font-medium whitespace-nowrap"
           >
-            <ArrowLeft className="w-5 h-5" />
-            New Analysis
+            <ArrowLeft className="w-4 h-4 md:w-5 md:h-5" />
+            <span className="hidden sm:inline">New Analysis</span>
+            <span className="sm:hidden">New</span>
           </button>
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-10">
+      <main className="container mx-auto px-4 md:px-6 py-6 md:py-10">
         <AnalysisDashboard
           analysis={result.analysis}
           resume={result.parsedResume}
@@ -235,9 +238,9 @@ export default function Home() {
         />
       </main>
 
-      <footer className="py-8 border-t border-gray-100 bg-white">
-        <div className="container mx-auto px-6 text-center">
-          <p className="text-sm text-gray-400">
+      <footer className="py-6 md:py-8 border-t border-gray-100 bg-white">
+        <div className="container mx-auto px-4 md:px-6 text-center">
+          <p className="text-xs md:text-sm text-gray-400">
             Box Breaker — Break HR&apos;s Black Box.
           </p>
         </div>
