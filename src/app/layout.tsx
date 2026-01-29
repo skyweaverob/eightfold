@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Profile Mirror - See What Employers See",
-  description: "Discover your complete professional digital footprint with AI-powered insights similar to enterprise talent intelligence platforms.",
+  title: "Box Breaker - Break HR's Black Box",
+  description: "See exactly how AI-driven hiring systems evaluate your profile. Break through the black box of automated screening.",
 };
 
 export default function RootLayout({
