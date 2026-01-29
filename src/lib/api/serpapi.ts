@@ -1,6 +1,7 @@
 import type { SearchResult, WebPresenceResult } from "@/types";
 
-const SERPAPI_URL = "https://serpapi.com/search";
+// Using SearchAPI.io for Google search
+const SEARCHAPI_URL = "https://www.searchapi.io/api/v1/search";
 
 interface SerpApiResult {
   position: number;
@@ -88,10 +89,10 @@ export interface DeepSearchResults {
 }
 
 export async function searchWeb(query: string, num: number = 20): Promise<SearchResult[]> {
-  const apiKey = process.env.SERPAPI_API_KEY;
+  const apiKey = process.env.SEARCHAPI_API_KEY;
   if (!apiKey) {
-    console.error("SERPAPI_API_KEY is not configured in environment variables");
-    throw new Error("SERPAPI_API_KEY is not configured");
+    console.error("SEARCHAPI_API_KEY is not configured in environment variables");
+    throw new Error("SEARCHAPI_API_KEY is not configured");
   }
 
   const params = new URLSearchParams({
@@ -103,25 +104,25 @@ export async function searchWeb(query: string, num: number = 20): Promise<Search
     hl: "en",
   });
 
-  console.log(`SerpAPI search: "${query}" (requesting ${num} results)`);
+  console.log(`SearchAPI search: "${query}" (requesting ${num} results)`);
 
-  const response = await fetch(`${SERPAPI_URL}?${params.toString()}`);
+  const response = await fetch(`${SEARCHAPI_URL}?${params.toString()}`);
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`SerpAPI request failed: ${response.status} ${response.statusText}`, errorText);
-    throw new Error(`SerpAPI request failed: ${response.status} - ${errorText}`);
+    console.error(`SearchAPI request failed: ${response.status} ${response.statusText}`, errorText);
+    throw new Error(`SearchAPI request failed: ${response.status} - ${errorText}`);
   }
 
   const data: SerpApiResponse = await response.json();
 
   if (data.error) {
-    console.error(`SerpAPI returned error:`, data.error);
-    throw new Error(`SerpAPI error: ${data.error}`);
+    console.error(`SearchAPI returned error:`, data.error);
+    throw new Error(`SearchAPI error: ${data.error}`);
   }
 
   const results = data.organic_results || [];
-  console.log(`SerpAPI returned ${results.length} results for "${query}"`);
+  console.log(`SearchAPI returned ${results.length} results for "${query}"`);
 
   return results.map((result) => ({
     title: result.title,
@@ -133,10 +134,10 @@ export async function searchWeb(query: string, num: number = 20): Promise<Search
 }
 
 export async function searchNews(query: string): Promise<SearchResult[]> {
-  const apiKey = process.env.SERPAPI_API_KEY;
+  const apiKey = process.env.SEARCHAPI_API_KEY;
   if (!apiKey) {
-    console.error("SERPAPI_API_KEY is not configured in environment variables");
-    throw new Error("SERPAPI_API_KEY is not configured");
+    console.error("SEARCHAPI_API_KEY is not configured in environment variables");
+    throw new Error("SEARCHAPI_API_KEY is not configured");
   }
 
   const params = new URLSearchParams({
@@ -147,25 +148,25 @@ export async function searchNews(query: string): Promise<SearchResult[]> {
     hl: "en",
   });
 
-  console.log(`SerpAPI news search: "${query}"`);
+  console.log(`SearchAPI news search: "${query}"`);
 
-  const response = await fetch(`${SERPAPI_URL}?${params.toString()}`);
+  const response = await fetch(`${SEARCHAPI_URL}?${params.toString()}`);
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`SerpAPI news request failed: ${response.status} ${response.statusText}`, errorText);
-    throw new Error(`SerpAPI news request failed: ${response.status} - ${errorText}`);
+    console.error(`SearchAPI news request failed: ${response.status} ${response.statusText}`, errorText);
+    throw new Error(`SearchAPI news request failed: ${response.status} - ${errorText}`);
   }
 
   const data: SerpApiResponse = await response.json();
 
   if (data.error) {
-    console.error(`SerpAPI news returned error:`, data.error);
-    throw new Error(`SerpAPI error: ${data.error}`);
+    console.error(`SearchAPI news returned error:`, data.error);
+    throw new Error(`SearchAPI error: ${data.error}`);
   }
 
   const results = data.news_results || [];
-  console.log(`SerpAPI news returned ${results.length} results for "${query}"`);
+  console.log(`SearchAPI news returned ${results.length} results for "${query}"`);
 
   return results.map((result) => ({
     title: result.title,
