@@ -5,6 +5,7 @@ import type {
   WebPresenceResult,
   SkillDemand,
   LinkedInProfile,
+  RedFlag,
 } from "@/types";
 
 const anthropic = new Anthropic();
@@ -233,4 +234,67 @@ Be specific and reference their actual skills, gaps, and market position.`,
   }
 
   return content.text;
+}
+
+export async function analyzeRedFlags(
+  resume: ParsedResume,
+  webPresence: WebPresenceResult[]
+): Promise<RedFlag[]> {
+  const response = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 2048,
+    messages: [
+      {
+        role: "user",
+        content: `Analyze this profile for red flags that automated screening systems (ATS, AI talent platforms like Eightfold, HireVue, etc.) might detect.
+
+Profile:
+${JSON.stringify({ resume, webPresence }, null, 2)}
+
+For each red flag, explain:
+1. What the system sees
+2. Why it's concerning to automated screening
+3. What to do about it
+
+Be honest. Be specific. Be actionable. Think like an ATS algorithm.
+
+Common red flags to consider:
+- Employment gaps
+- Short tenure patterns
+- Title inconsistencies
+- Skill claims without evidence
+- Missing web presence for claimed expertise
+- Date overlaps or inconsistencies
+- Overqualification signals
+- Career direction unclear
+
+Return JSON only:
+{
+  "flags": [
+    {
+      "title": "<short descriptive name>",
+      "priority": "high" | "medium" | "low",
+      "whatSystemSees": "<what the ATS/AI detects>",
+      "whyConcerning": "<why this matters to employers>",
+      "action": "<specific fix>"
+    }
+  ]
+}`,
+      },
+    ],
+  });
+
+  const content = response.content[0];
+  if (content.type !== "text") {
+    throw new Error("Unexpected response type from Claude");
+  }
+
+  try {
+    const jsonText = extractJSON(content.text);
+    const parsed = JSON.parse(jsonText);
+    return parsed.flags || [];
+  } catch (e) {
+    console.error("Failed to parse red flags response:", content.text.slice(0, 500));
+    return [];
+  }
 }

@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Upload, FileText, X, Loader2 } from "lucide-react";
-import { Button } from "./ui/button";
+import { Upload, FileText, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FileUploadProps {
@@ -29,48 +28,48 @@ export function FileUpload({
     }
   }, []);
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setDragActive(false);
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
 
-      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-        const file = e.dataTransfer.files[0];
-        if (file.name.toLowerCase().endsWith(".pdf")) {
-          setSelectedFile(file);
-        }
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.name.toLowerCase().endsWith(".pdf")) {
+        setSelectedFile(file);
+        onFileSelect(file);
+      }
+    }
+  }, [onFileSelect]);
+
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      e.preventDefault();
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        setSelectedFile(file);
+        onFileSelect(file);
       }
     },
-    []
+    [onFileSelect]
   );
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const clearFile = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
     e.preventDefault();
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-    }
-  }, []);
-
-  const handleSubmit = useCallback(() => {
-    if (selectedFile) {
-      onFileSelect(selectedFile);
-    }
-  }, [selectedFile, onFileSelect]);
-
-  const clearFile = useCallback(() => {
     setSelectedFile(null);
   }, []);
 
   return (
-    <div className="w-full max-w-xl mx-auto">
+    <div className="w-full max-w-md mx-auto">
       <div
         className={cn(
-          "relative border-2 border-dashed rounded-lg p-8 transition-colors",
+          "relative border-2 border-dashed rounded-[var(--radius-lg)] p-12 transition-all duration-200",
           dragActive
-            ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
-            : "border-gray-300 dark:border-gray-700",
-          selectedFile && "border-green-500 bg-green-50 dark:bg-green-950"
+            ? "border-[var(--accent)] bg-[var(--accent-light)]"
+            : "border-[var(--border)] hover:border-[var(--accent)] hover:bg-[var(--surface)]",
+          selectedFile && "border-[var(--success)] bg-[var(--success-light)]",
+          isLoading && "pointer-events-none opacity-60"
         )}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -88,67 +87,47 @@ export function FileUpload({
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
           {selectedFile ? (
             <>
-              <div className="p-3 bg-green-100 dark:bg-green-900 rounded-full">
-                <FileText className="w-8 h-8 text-green-600 dark:text-green-400" />
+              <div className="w-12 h-12 rounded-full bg-[var(--success)] bg-opacity-10 flex items-center justify-center">
+                <FileText className="w-6 h-6 text-[var(--success)]" />
               </div>
               <div>
-                <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                <p className="text-headline text-[var(--text-primary)]">
                   {selectedFile.name}
                 </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-footnote text-[var(--text-secondary)] mt-1">
                   {(selectedFile.size / 1024).toFixed(1)} KB
                 </p>
               </div>
               {!isLoading && (
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    clearFile();
-                  }}
-                  className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+                  onClick={clearFile}
+                  className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-[var(--surface)] transition-colors"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4 text-[var(--text-secondary)]" />
                 </button>
               )}
             </>
           ) : (
             <>
-              <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-full">
-                <Upload className="w-8 h-8 text-gray-500 dark:text-gray-400" />
+              <div className="w-12 h-12 rounded-full bg-[var(--surface)] flex items-center justify-center">
+                <Upload className="w-6 h-6 text-[var(--text-secondary)]" />
               </div>
               <div>
-                <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                <p className="text-headline text-[var(--text-primary)]">
                   Drop your resume here
                 </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  or click to browse (PDF only)
+                <p className="text-footnote text-[var(--text-secondary)] mt-1">
+                  or click to browse
                 </p>
               </div>
+              <p className="text-caption text-[var(--text-tertiary)]">
+                PDF only
+              </p>
             </>
           )}
         </div>
       </div>
-
-      {selectedFile && (
-        <div className="mt-4 flex justify-center">
-          <Button
-            onClick={handleSubmit}
-            disabled={isLoading}
-            size="lg"
-            className="w-full max-w-xs"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              "Analyze My Profile"
-            )}
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

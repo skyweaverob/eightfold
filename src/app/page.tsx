@@ -3,14 +3,15 @@
 import { useState } from "react";
 import { FileUpload } from "@/components/FileUpload";
 import { AnalysisDashboard } from "@/components/AnalysisDashboard";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Shield, Zap, Eye, Loader2, CheckCircle } from "lucide-react";
-import type { ProfileAnalysis, ParsedResume, WebPresenceResult } from "@/types";
+import { Stepper } from "@/components/ui/stepper";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import type { ProfileAnalysis, ParsedResume, WebPresenceResult, SalaryEstimate } from "@/types";
 
 interface AnalysisResult {
   parsedResume: ParsedResume;
   webPresence: WebPresenceResult[];
   analysis: ProfileAnalysis;
+  salaryEstimate?: SalaryEstimate;
 }
 
 interface ProgressStep {
@@ -20,27 +21,29 @@ interface ProgressStep {
   complete: boolean;
 }
 
-const STEP_LABELS = [
-  "Extract PDF",
-  "Parse Resume",
-  "Web Presence",
-  "Market Data",
-  "AI Analysis",
+const STEPS = [
+  { label: "Extracting text" },
+  { label: "Parsing structure" },
+  { label: "Web presence" },
+  { label: "Market data" },
+  { label: "AI analysis" },
 ];
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([]);
-  const [currentStep, setCurrentStep] = useState<ProgressStep | null>(null);
+  const [currentStepNum, setCurrentStepNum] = useState(0);
+  const [currentMessage, setCurrentMessage] = useState("");
+  const [currentDetail, setCurrentDetail] = useState("");
 
   const handleFileSelect = async (file: File) => {
     setIsLoading(true);
     setError(null);
     setResult(null);
-    setProgressSteps([]);
-    setCurrentStep(null);
+    setCurrentStepNum(1);
+    setCurrentMessage("Starting analysis...");
+    setCurrentDetail("");
 
     try {
       const formData = new FormData();
@@ -73,41 +76,12 @@ export default function Home() {
             const data = JSON.parse(line);
 
             if (data.type === "progress") {
-              const step: ProgressStep = {
-                step: data.step,
-                message: data.message,
-                detail: data.detail,
-                complete: false,
-              };
-
-              setCurrentStep(step);
-
-              // Mark previous step as complete
-              setProgressSteps((prev) => {
-                const updated = [...prev];
-                if (updated.length > 0) {
-                  updated[updated.length - 1].complete = true;
-                }
-                // Only add if it's a new step number or first occurrence
-                if (!updated.some((s) => s.step === step.step)) {
-                  updated.push(step);
-                } else {
-                  // Update existing step
-                  const idx = updated.findIndex((s) => s.step === step.step);
-                  updated[idx] = step;
-                }
-                return updated;
-              });
+              setCurrentStepNum(data.step);
+              setCurrentMessage(data.message);
+              setCurrentDetail(data.detail || "");
             } else if (data.type === "error") {
               throw new Error(data.error);
             } else if (data.type === "result" && data.success) {
-              setProgressSteps((prev) => {
-                const updated = [...prev];
-                if (updated.length > 0) {
-                  updated[updated.length - 1].complete = true;
-                }
-                return updated;
-              });
               setResult(data.data);
             }
           } catch (e) {
@@ -123,170 +97,126 @@ export default function Home() {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setIsLoading(false);
-      setCurrentStep(null);
     }
   };
 
   const handleReset = () => {
     setResult(null);
     setError(null);
-    setProgressSteps([]);
+    setCurrentStepNum(0);
+    setCurrentMessage("");
+    setCurrentDetail("");
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
-      {/* Header */}
-      <header className="border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <Eye className="w-5 h-5 text-white" />
+  // Upload/Analysis Screen
+  if (!result) {
+    return (
+      <div className="min-h-screen bg-[var(--background)] flex flex-col">
+        {/* Minimal header - only shows during analysis or with results */}
+        {isLoading && (
+          <header className="py-4 border-b border-[var(--border-light)]">
+            <div className="container mx-auto px-4">
+              <span className="text-headline text-[var(--text-primary)]">
+                Profile Mirror
+              </span>
             </div>
-            <span className="font-bold text-xl">Profile Mirror</span>
-          </div>
-          {result && (
-            <Button variant="ghost" onClick={handleReset}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              New Analysis
-            </Button>
+          </header>
+        )}
+
+        <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+          {!isLoading ? (
+            // Upload Screen - Pure focus
+            <div className="w-full max-w-md text-center">
+              <h1 className="text-title-1 text-[var(--text-primary)] mb-2">
+                Profile Mirror
+              </h1>
+              <p className="text-subhead text-[var(--text-secondary)] mb-12">
+                Know what they know.
+              </p>
+
+              <FileUpload onFileSelect={handleFileSelect} isLoading={isLoading} />
+
+              {error && (
+                <div className="mt-6 p-4 bg-[var(--error-light)] rounded-[var(--radius-md)]">
+                  <p className="text-footnote text-[var(--error)]">{error}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            // Analyzing Screen
+            <div className="w-full max-w-lg text-center">
+              <h2 className="text-title-2 text-[var(--text-primary)] mb-8">
+                Analyzing
+              </h2>
+
+              <Stepper steps={STEPS} currentStep={currentStepNum} className="mb-8" />
+
+              <div className="py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-[var(--accent)] mx-auto mb-4" />
+                <p className="text-headline text-[var(--text-primary)]">
+                  {currentMessage}
+                </p>
+                {currentDetail && (
+                  <p className="text-footnote text-[var(--text-secondary)] mt-2">
+                    {currentDetail}
+                  </p>
+                )}
+              </div>
+            </div>
           )}
+        </main>
+
+        {!isLoading && (
+          <footer className="py-6 text-center">
+            <p className="text-caption text-[var(--text-tertiary)]">
+              Your resume is processed securely and not stored.
+            </p>
+          </footer>
+        )}
+      </div>
+    );
+  }
+
+  // Results Screen
+  return (
+    <div className="min-h-screen bg-[var(--background)]">
+      {/* Header with identity */}
+      <header className="py-4 border-b border-[var(--border-light)] sticky top-0 bg-[var(--background)] z-50">
+        <div className="container mx-auto px-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-headline text-[var(--text-primary)]">
+              {result.parsedResume.fullName || "Profile Mirror"}
+            </h1>
+            {result.parsedResume.email && (
+              <p className="text-caption text-[var(--text-secondary)]">
+                {result.parsedResume.email}
+                {result.parsedResume.location && ` · ${result.parsedResume.location}`}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={handleReset}
+            className="flex items-center gap-1.5 text-footnote text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            New Analysis
+          </button>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {!result ? (
-          <>
-            {/* Hero Section */}
-            <div className="text-center max-w-3xl mx-auto mb-12">
-              <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                See What Employers See
-              </h1>
-              <p className="text-lg text-gray-600 dark:text-gray-400 mb-8">
-                Discover your complete professional digital footprint. Profile Mirror
-                aggregates your online presence and provides AI-powered insights
-                similar to enterprise talent intelligence platforms.
-              </p>
-
-              {/* Features */}
-              <div className="grid md:grid-cols-3 gap-6 mb-12">
-                <div className="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm">
-                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mx-auto mb-3">
-                    <Eye className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <h3 className="font-semibold mb-1">Digital Footprint</h3>
-                  <p className="text-sm text-gray-500">
-                    See all your professional profiles across the web
-                  </p>
-                </div>
-                <div className="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm">
-                  <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center mx-auto mb-3">
-                    <Zap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <h3 className="font-semibold mb-1">AI Skills Analysis</h3>
-                  <p className="text-sm text-gray-500">
-                    Discover skills you have but may not have listed
-                  </p>
-                </div>
-                <div className="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm">
-                  <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center mx-auto mb-3">
-                    <Shield className="w-5 h-5 text-green-600 dark:text-green-400" />
-                  </div>
-                  <h3 className="font-semibold mb-1">Market Position</h3>
-                  <p className="text-sm text-gray-500">
-                    Understand your competitive standing in the job market
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Upload Section */}
-            <div className="max-w-xl mx-auto">
-              <FileUpload onFileSelect={handleFileSelect} isLoading={isLoading} />
-
-              {/* Progress Display */}
-              {isLoading && progressSteps.length > 0 && (
-                <div className="mt-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                  <div className="space-y-3">
-                    {/* Step indicators */}
-                    <div className="flex justify-between mb-4">
-                      {STEP_LABELS.map((label, idx) => {
-                        const stepNum = idx + 1;
-                        const isComplete = progressSteps.some(
-                          (s) => s.step > stepNum || (s.step === stepNum && s.complete)
-                        );
-                        const isCurrent = currentStep?.step === stepNum;
-
-                        return (
-                          <div key={idx} className="flex flex-col items-center">
-                            <div
-                              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
-                                isComplete
-                                  ? "bg-green-500 text-white"
-                                  : isCurrent
-                                    ? "bg-blue-500 text-white"
-                                    : "bg-gray-200 dark:bg-gray-700 text-gray-500"
-                              }`}
-                            >
-                              {isComplete ? (
-                                <CheckCircle className="w-4 h-4" />
-                              ) : isCurrent ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                stepNum
-                              )}
-                            </div>
-                            <span className="text-xs mt-1 text-gray-500 hidden sm:block">
-                              {label}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Current step detail */}
-                    {currentStep && (
-                      <div className="text-center">
-                        <p className="font-medium text-gray-900 dark:text-gray-100">
-                          {currentStep.message}
-                        </p>
-                        {currentStep.detail && (
-                          <p className="text-sm text-gray-500 mt-1">
-                            {currentStep.detail}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {error && (
-                <div className="mt-4 p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
-                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                </div>
-              )}
-
-              <div className="mt-8 text-center text-sm text-gray-500">
-                <p>
-                  Your resume is processed securely and not stored permanently.
-                </p>
-              </div>
-            </div>
-          </>
-        ) : (
-          <AnalysisDashboard
-            analysis={result.analysis}
-            resume={result.parsedResume}
-            webPresence={result.webPresence}
-          />
-        )}
+        <AnalysisDashboard
+          analysis={result.analysis}
+          resume={result.parsedResume}
+          webPresence={result.webPresence}
+          salaryEstimate={result.salaryEstimate}
+        />
       </main>
 
-      {/* Footer */}
-      <footer className="border-t mt-auto py-6">
-        <div className="container mx-auto px-4 text-center text-sm text-gray-500">
-          <p>
-            Profile Mirror - Democratizing talent intelligence for job seekers
+      <footer className="py-6 border-t border-[var(--border-light)]">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-caption text-[var(--text-tertiary)]">
+            Profile Mirror — Know what they know.
           </p>
         </div>
       </footer>

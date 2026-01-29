@@ -179,3 +179,74 @@ export interface AnalysisProgress {
   progress: number;
   message: string;
 }
+
+// Market Value Types
+export interface SalaryEstimate {
+  min: number;
+  max: number;
+  median: number;
+  percentile: {
+    low: number;
+    high: number;
+    rationale: string;
+  };
+  location: string;
+  sampleSize: number;
+}
+
+// Job Search Types
+export interface JobListing {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  description: string;
+  url: string;
+  salaryMin?: number;
+  salaryMax?: number;
+  createdAt?: string;
+  category?: string;
+}
+
+// Job Compatibility Types
+export interface JobCompatibility {
+  score: number;
+  breakdown: {
+    skills: number;
+    experience: number;
+    industry: number;
+  };
+  strengths: string[];
+  gaps: string[];
+  salaryLeverage: {
+    targetLow: number;
+    targetHigh: number;
+    rationale: string;
+  };
+  recommendation: string;
+}
+
+// Red Flag Types
+export interface RedFlag {
+  title: string;
+  priority: "high" | "medium" | "low";
+  whatSystemSees: string;
+  whyConcerning: string;
+  action: string;
+}
+
+// Parse Preview Types
+export interface ParsePreview {
+  detectedRole: string;
+  experienceYears: number;
+  experienceParsedCorrectly: boolean;
+  skillsExtracted: string[];
+  sectionsFound: {
+    experience: boolean;
+    education: boolean;
+    skills: boolean;
+    summary: boolean;
+    contact: boolean;
+  };
+  parseIssues: string[];
+}

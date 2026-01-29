@@ -1,180 +1,183 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Badge } from "./ui/badge";
+import { ScoreDisplay } from "./ui/score-display";
+import { ProgressBar } from "./ui/progress-bar";
+import { MarketValue } from "./MarketValue";
+import { ParsePreview } from "./ParsePreview";
+import { RedFlags } from "./RedFlags";
+import { JobSearch } from "./JobSearch";
 import {
-  Briefcase,
   Star,
   TrendingUp,
-  AlertTriangle,
-  CheckCircle,
   Globe,
   Lightbulb,
+  CheckCircle,
+  ExternalLink,
 } from "lucide-react";
-import type { ProfileAnalysis, ParsedResume, WebPresenceResult } from "@/types";
-import { cn } from "@/lib/utils";
+import type {
+  ProfileAnalysis,
+  ParsedResume,
+  WebPresenceResult,
+  SalaryEstimate,
+  ParsePreview as ParsePreviewType,
+  RedFlag,
+} from "@/types";
 
 interface AnalysisDashboardProps {
   analysis: ProfileAnalysis;
   resume: ParsedResume;
   webPresence: WebPresenceResult[];
-}
-
-function ScoreBadge({ score, label }: { score: number; label: string }) {
-  const color =
-    score >= 70
-      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-      : score >= 40
-        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
-
-  return (
-    <div className={cn("px-3 py-1 rounded-full text-sm font-medium", color)}>
-      {label}: {score}/100
-    </div>
-  );
-}
-
-function PriorityBadge({ priority }: { priority: "high" | "medium" | "low" }) {
-  const styles = {
-    high: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-    medium: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-    low: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  };
-
-  return (
-    <span className={cn("px-2 py-0.5 rounded text-xs font-medium", styles[priority])}>
-      {priority}
-    </span>
-  );
+  salaryEstimate?: SalaryEstimate;
+  parsePreview?: ParsePreviewType;
+  redFlags?: RedFlag[];
 }
 
 export function AnalysisDashboard({
   analysis,
   resume,
   webPresence,
+  salaryEstimate,
+  parsePreview,
+  redFlags,
 }: AnalysisDashboardProps) {
+  const [showJobSearch, setShowJobSearch] = useState(false);
+
+  // Generate parse preview from resume data if not provided
+  const derivedParsePreview: ParsePreviewType = parsePreview || {
+    detectedRole: resume.experience?.[0]?.title || "Not detected",
+    experienceYears: analysis.career.yearsOfExperience,
+    experienceParsedCorrectly: true,
+    skillsExtracted: resume.skills?.map((s) => s.name) || [],
+    sectionsFound: {
+      experience: (resume.experience?.length || 0) > 0,
+      education: (resume.education?.length || 0) > 0,
+      skills: (resume.skills?.length || 0) > 0,
+      summary: !!resume.summary,
+      contact: !!(resume.email || resume.phone),
+    },
+    parseIssues: [],
+  };
+
+  // Convert concerns to red flags if not provided
+  const derivedRedFlags: RedFlag[] =
+    redFlags ||
+    analysis.concerns.map((concern) => ({
+      title: concern.area,
+      priority: concern.severity,
+      whatSystemSees: concern.description,
+      whyConcerning: `This may be flagged by automated screening systems.`,
+      action: concern.mitigation || "Address this concern in your resume or cover letter.",
+    }));
+
+  // Generate salary estimate from market position if not provided
+  const derivedSalaryEstimate: SalaryEstimate = salaryEstimate || {
+    min: analysis.marketPosition.salaryRange.min,
+    max: analysis.marketPosition.salaryRange.max,
+    median: analysis.marketPosition.salaryRange.median,
+    percentile: {
+      low: 50,
+      high: 70,
+      rationale: `Based on ${analysis.career.yearsOfExperience} years of experience.`,
+    },
+    location: resume.location || "United States",
+    sampleSize: 0,
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Header with scores */}
-      <div className="flex flex-wrap gap-3 justify-center">
-        <ScoreBadge score={analysis.marketPosition.overallScore} label="Market Score" />
-        <ScoreBadge score={analysis.webPresence.consistency} label="Profile Consistency" />
+    <div className="space-y-8 max-w-4xl mx-auto">
+      {/* Market Value - Lead with this */}
+      <MarketValue
+        salary={derivedSalaryEstimate}
+        title={resume.experience?.[0]?.title}
+      />
+
+      {/* Profile Scores */}
+      <div className="flex justify-center gap-12">
+        <ScoreDisplay
+          score={analysis.marketPosition.overallScore}
+          label="Market Score"
+          size="lg"
+        />
+        <ScoreDisplay
+          score={analysis.webPresence.consistency}
+          label="Parse Quality"
+          size="lg"
+        />
       </div>
 
-      {/* Profile Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Briefcase className="w-5 h-5" />
-            Profile Summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                {resume.fullName || "Name not found"}
-              </h4>
-              <p className="text-sm text-gray-500">{resume.email}</p>
-              <p className="text-sm text-gray-500">{resume.location}</p>
-            </div>
-            <div>
-              <p className="text-sm">
-                <span className="font-medium">Experience:</span>{" "}
-                {analysis.career.yearsOfExperience} years
-              </p>
-              <p className="text-sm">
-                <span className="font-medium">Trajectory:</span>{" "}
-                <span className="capitalize">{analysis.career.progression}</span>
-              </p>
-              <p className="text-sm">
-                <span className="font-medium">Competitiveness:</span>{" "}
-                <span className="capitalize">{analysis.marketPosition.competitiveness}</span>
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* What the Machine Sees */}
+      <ParsePreview preview={derivedParsePreview} />
 
       {/* Skills Analysis */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Star className="w-5 h-5" />
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-title-3">
+            <Star className="w-5 h-5 text-[var(--accent)]" />
             Skills Analysis
           </CardTitle>
-          <CardDescription>
-            Your stated skills and AI-inferred capabilities
-          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          {/* Strengths */}
           <div>
-            <h4 className="font-medium mb-2 text-green-700 dark:text-green-400">
+            <h4 className="text-footnote text-[var(--text-secondary)] mb-2">
               Strengths
             </h4>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {analysis.skills.strengths.map((strength, i) => (
-                <span
-                  key={i}
-                  className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-sm"
-                >
+                <Badge key={i} variant="success">
                   {strength}
-                </span>
+                </Badge>
               ))}
             </div>
           </div>
 
+          {/* In Demand */}
           <div>
-            <h4 className="font-medium mb-2">Skills in High Demand</h4>
-            <div className="flex flex-wrap gap-2">
+            <h4 className="text-footnote text-[var(--text-secondary)] mb-2">
+              In Demand
+            </h4>
+            <div className="flex flex-wrap gap-1.5">
               {analysis.marketPosition.skillsInDemand.map((skill, i) => (
-                <span
-                  key={i}
-                  className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-sm"
-                >
+                <Badge key={i} variant="accent">
                   {skill}
-                </span>
+                </Badge>
               ))}
             </div>
           </div>
 
-          {analysis.skills.inferred.length > 0 && (
-            <div>
-              <h4 className="font-medium mb-2 text-purple-700 dark:text-purple-400">
-                AI-Inferred Skills
-              </h4>
-              <p className="text-xs text-gray-500 mb-2">
-                Skills we detected from your experience that you may not have listed
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {analysis.skills.inferred.slice(0, 10).map((skill, i) => (
-                  <span
-                    key={i}
-                    className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded text-sm"
-                    title={skill.inferenceReason}
-                  >
-                    {skill.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
+          {/* Gaps */}
           {analysis.skills.gaps.length > 0 && (
             <div>
-              <h4 className="font-medium mb-2 text-amber-700 dark:text-amber-400">
-                Skill Gaps
+              <h4 className="text-footnote text-[var(--text-secondary)] mb-2">
+                Gaps
               </h4>
               <div className="space-y-2">
                 {analysis.skills.gaps.map((gap, i) => (
                   <div
                     key={i}
-                    className="flex items-start gap-2 text-sm p-2 bg-amber-50 dark:bg-amber-950 rounded"
+                    className="flex items-start gap-3 p-3 bg-[var(--surface)] rounded-[var(--radius-md)]"
                   >
-                    <PriorityBadge priority={gap.importance} />
+                    <Badge
+                      variant={
+                        gap.importance === "high"
+                          ? "error"
+                          : gap.importance === "medium"
+                            ? "warning"
+                            : "muted"
+                      }
+                    >
+                      {gap.importance}
+                    </Badge>
                     <div>
-                      <span className="font-medium">{gap.skill}</span>
-                      <p className="text-gray-600 dark:text-gray-400">{gap.reason}</p>
+                      <span className="text-subhead font-medium text-[var(--text-primary)]">
+                        {gap.skill}
+                      </span>
+                      <p className="text-footnote text-[var(--text-secondary)] mt-0.5">
+                        {gap.reason}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -184,99 +187,115 @@ export function AnalysisDashboard({
         </CardContent>
       </Card>
 
+      {/* Red Flags */}
+      <RedFlags flags={derivedRedFlags} />
+
       {/* Career Trajectory */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5" />
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-title-3">
+            <TrendingUp className="w-5 h-5 text-[var(--accent)]" />
             Career Trajectory
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-gray-700 dark:text-gray-300">
+        <CardContent className="space-y-6">
+          <p className="text-body text-[var(--text-secondary)]">
             {analysis.career.trajectory}
           </p>
 
+          {/* Industry Focus */}
           <div>
-            <h4 className="font-medium mb-2">Industry Focus</h4>
-            <div className="flex flex-wrap gap-2">
+            <h4 className="text-footnote text-[var(--text-secondary)] mb-2">
+              Industry Focus
+            </h4>
+            <div className="flex flex-wrap gap-1.5">
               {analysis.career.industryFocus.map((industry, i) => (
-                <span
-                  key={i}
-                  className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-sm"
-                >
+                <Badge key={i} variant="default">
                   {industry}
-                </span>
+                </Badge>
               ))}
             </div>
           </div>
 
-          {analysis.career.potentialPaths.length > 0 && (
-            <div>
-              <h4 className="font-medium mb-2">Potential Next Roles</h4>
-              <div className="space-y-2">
-                {analysis.career.potentialPaths[0]?.nextRoles.map((role, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded"
-                  >
-                    <span>{role.title}</span>
-                    <span className="text-sm text-gray-500">
-                      {Math.round(role.probability * 100)}% match
-                    </span>
-                  </div>
-                ))}
+          {/* Potential Next Roles */}
+          {analysis.career.potentialPaths.length > 0 &&
+            analysis.career.potentialPaths[0]?.nextRoles.length > 0 && (
+              <div>
+                <h4 className="text-footnote text-[var(--text-secondary)] mb-3">
+                  Potential Next Roles
+                </h4>
+                <div className="space-y-2">
+                  {analysis.career.potentialPaths[0].nextRoles.map(
+                    (role, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between p-3 bg-[var(--surface)] rounded-[var(--radius-md)]"
+                      >
+                        <span className="text-subhead text-[var(--text-primary)]">
+                          {role.title}
+                        </span>
+                        <ProgressBar
+                          value={role.probability * 100}
+                          showValue
+                          size="sm"
+                          className="w-24"
+                        />
+                      </div>
+                    )
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </CardContent>
       </Card>
 
       {/* Web Presence */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="w-5 h-5" />
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-title-3">
+            <Globe className="w-5 h-5 text-[var(--accent)]" />
             Web Presence
           </CardTitle>
-          <CardDescription>
-            What employers can find about you online
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-2">
+          <div className="space-y-2">
             {webPresence.map((presence, i) => (
               <a
                 key={i}
                 href={presence.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="flex items-start gap-3 p-3 border border-[var(--border-light)] rounded-[var(--radius-md)] hover:border-[var(--border)] transition-colors group"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs capitalize">
-                      {presence.platform}
-                    </span>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge variant="muted">{presence.platform}</Badge>
                   </div>
-                  <p className="font-medium truncate">{presence.title}</p>
-                  <p className="text-sm text-gray-500 truncate">
-                    {presence.description}
+                  <p className="text-subhead font-medium text-[var(--text-primary)] truncate">
+                    {presence.title || presence.url}
                   </p>
+                  {presence.description && (
+                    <p className="text-footnote text-[var(--text-secondary)] truncate">
+                      {presence.description}
+                    </p>
+                  )}
                 </div>
+                <ExternalLink className="w-4 h-4 text-[var(--text-tertiary)] group-hover:text-[var(--accent)] transition-colors flex-shrink-0" />
               </a>
             ))}
           </div>
 
           {analysis.webPresence.issues.length > 0 && (
-            <div>
-              <h4 className="font-medium mb-2 flex items-center gap-2 text-amber-700 dark:text-amber-400">
-                <AlertTriangle className="w-4 h-4" />
+            <div className="p-3 bg-[var(--warning-light)] rounded-[var(--radius-md)]">
+              <h4 className="text-footnote font-medium text-[#996300] mb-2">
                 Issues Found
               </h4>
               <ul className="space-y-1">
                 {analysis.webPresence.issues.map((issue, i) => (
-                  <li key={i} className="text-sm text-gray-600 dark:text-gray-400">
+                  <li
+                    key={i}
+                    className="text-footnote text-[var(--text-secondary)]"
+                  >
                     {issue}
                   </li>
                 ))}
@@ -288,36 +307,48 @@ export function AnalysisDashboard({
 
       {/* Recommendations */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lightbulb className="w-5 h-5" />
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-title-3">
+            <Lightbulb className="w-5 h-5 text-[var(--accent)]" />
             Recommendations
           </CardTitle>
-          <CardDescription>
-            Actionable steps to improve your profile
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {analysis.recommendations.map((rec, i) => (
-              <div key={i} className="border-l-4 border-blue-500 pl-4 py-2">
+              <div
+                key={i}
+                className="pl-4 border-l-2 border-[var(--accent)] py-2"
+              >
                 <div className="flex items-center gap-2 mb-1">
-                  <PriorityBadge priority={rec.priority} />
-                  <span className="text-xs text-gray-500 capitalize">
+                  <Badge
+                    variant={
+                      rec.priority === "high"
+                        ? "error"
+                        : rec.priority === "medium"
+                          ? "warning"
+                          : "muted"
+                    }
+                  >
+                    {rec.priority}
+                  </Badge>
+                  <span className="text-caption text-[var(--text-tertiary)]">
                     {rec.category}
                   </span>
                 </div>
-                <h4 className="font-medium">{rec.title}</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                <h4 className="text-headline text-[var(--text-primary)]">
+                  {rec.title}
+                </h4>
+                <p className="text-footnote text-[var(--text-secondary)] mt-1 mb-2">
                   {rec.description}
                 </p>
                 <ul className="space-y-1">
                   {rec.actionItems.map((item, j) => (
                     <li
                       key={j}
-                      className="text-sm flex items-start gap-2 text-gray-700 dark:text-gray-300"
+                      className="text-footnote flex items-start gap-2 text-[var(--text-primary)]"
                     >
-                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <CheckCircle className="w-4 h-4 text-[var(--success)] mt-0.5 flex-shrink-0" />
                       {item}
                     </li>
                   ))}
@@ -328,46 +359,36 @@ export function AnalysisDashboard({
         </CardContent>
       </Card>
 
-      {/* Concerns */}
-      {analysis.concerns.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-              <AlertTriangle className="w-5 h-5" />
-              Potential Employer Concerns
-            </CardTitle>
-            <CardDescription>
-              Issues that employers might flag during review
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {analysis.concerns.map((concern, i) => (
-                <div
-                  key={i}
-                  className="p-4 bg-amber-50 dark:bg-amber-950 rounded-lg"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <PriorityBadge priority={concern.severity} />
-                    <span className="font-medium">{concern.area}</span>
-                  </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                    {concern.description}
-                  </p>
-                  {concern.mitigation && (
-                    <div className="text-sm">
-                      <span className="font-medium text-green-700 dark:text-green-400">
-                        Mitigation:{" "}
-                      </span>
-                      {concern.mitigation}
-                    </div>
-                  )}
-                </div>
-              ))}
+      {/* Job Compatibility Search */}
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-title-3 text-center">
+            Check Job Compatibility
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {showJobSearch ? (
+            <JobSearch
+              profileAnalysis={analysis}
+              resume={resume}
+              marketValue={derivedSalaryEstimate}
+            />
+          ) : (
+            <div className="text-center">
+              <p className="text-subhead text-[var(--text-secondary)] mb-4">
+                Search for specific roles to see how well you match and what
+                salary you can target.
+              </p>
+              <button
+                onClick={() => setShowJobSearch(true)}
+                className="px-6 py-2.5 bg-[var(--accent)] text-white rounded-[var(--radius-md)] text-subhead font-medium hover:bg-[var(--accent-hover)] transition-colors"
+              >
+                Search Jobs
+              </button>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
