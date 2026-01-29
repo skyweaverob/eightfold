@@ -256,6 +256,15 @@ function identifyPlatform(url: string): string {
   if (urlLower.includes("businessinsider.com")) return "businessinsider";
   if (urlLower.includes("reuters.com")) return "reuters";
   if (urlLower.includes("bbc.com") || urlLower.includes("bbc.co.uk")) return "bbc";
+  if (urlLower.includes("spectator.com") || urlLower.includes("spectator.co.uk")) return "spectator";
+  if (urlLower.includes("theguardian.com") || urlLower.includes("guardian.co.uk")) return "guardian";
+  if (urlLower.includes("telegraph.co.uk")) return "telegraph";
+  if (urlLower.includes("thetimes.co.uk") || urlLower.includes("thetimes.com")) return "thetimes";
+  if (urlLower.includes("economist.com")) return "economist";
+  if (urlLower.includes("ft.com")) return "ft";
+  if (urlLower.includes("theatlantic.com")) return "atlantic";
+  if (urlLower.includes("newyorker.com")) return "newyorker";
+  if (urlLower.includes("politico.com") || urlLower.includes("politico.eu")) return "politico";
 
   // Try to extract domain as platform
   try {
@@ -389,7 +398,11 @@ export async function deepWebSearch(
 
     // === OTHER PROFILE SEARCHES (Priority 1) ===
     { query: `site:github.com "${name}" ${contextStr}`, category: "profile", priority: 1 },
-    { query: `site:twitter.com OR site:x.com "${name}" ${contextStr}`, category: "profile", priority: 1 },
+    { query: `site:twitter.com "${name}" ${contextStr}`, category: "profile", priority: 1 },
+    { query: `site:x.com "${name}" ${contextStr}`, category: "profile", priority: 1 },
+
+    // === GENERAL WEB PROFILE SEARCH (Priority 1) - catches author pages, about pages ===
+    { query: `"${name}" ${contextStr}`, category: "profile", priority: 1 },
 
     // === EXTENDED PROFILE SEARCHES (Priority 2) ===
     { query: `site:medium.com "${name}"`, category: "profile", priority: 2 },
@@ -405,6 +418,15 @@ export async function deepWebSearch(
     { query: `site:dribbble.com "${name}"`, category: "profile", priority: 3 },
     { query: `site:behance.net "${name}"`, category: "profile", priority: 3 },
     { query: `site:kaggle.com "${name}"`, category: "profile", priority: 3 },
+
+    // === AUTHOR/WRITER/CONTRIBUTOR PROFILE SEARCHES (Priority 2) - GENERIC ===
+    { query: `"${name}" author bio`, category: "profile", priority: 2 },
+    { query: `"${name}" writer contributor`, category: "profile", priority: 2 },
+    { query: `"${name}" columnist journalist`, category: "profile", priority: 2 },
+    { query: `inurl:author "${name}"`, category: "profile", priority: 2 },
+    { query: `inurl:writer "${name}"`, category: "profile", priority: 3 },
+    { query: `inurl:contributor "${name}"`, category: "profile", priority: 3 },
+    { query: `"${name}" "about the author"`, category: "profile", priority: 3 },
 
     // === NEWS SEARCHES (Priority 1) ===
     // Note: News searches use a different endpoint
@@ -433,10 +455,12 @@ export async function deepWebSearch(
     { query: `"${name}" "top" OR "best" OR "leading" ${context?.title || ""} ${context?.industry || ""}`, category: "award", priority: 3 },
     { query: `"${name}" Forbes OR Fortune OR Inc OR "Business Insider" list`, category: "award", priority: 3 },
 
-    // === PODCAST APPEARANCES (Priority 3) ===
-    { query: `"${name}" podcast guest OR interview ${contextStr}`, category: "podcast", priority: 3 },
-    { query: `site:spotify.com "${name}" podcast`, category: "podcast", priority: 3 },
-    { query: `site:podcasts.apple.com "${name}"`, category: "podcast", priority: 3 },
+    // === PODCAST APPEARANCES (Priority 2 - elevated importance) ===
+    { query: `"${name}" podcast guest OR interview ${contextStr}`, category: "podcast", priority: 2 },
+    { query: `site:spotify.com "${name}" podcast`, category: "podcast", priority: 2 },
+    { query: `site:podcasts.apple.com "${name}"`, category: "podcast", priority: 2 },
+    { query: `site:apple.com/podcasts "${name}"`, category: "podcast", priority: 2 },
+    { query: `"${name}" episode podcast`, category: "podcast", priority: 3 },
 
     // === VIDEO CONTENT (Priority 2) ===
     { query: `site:youtube.com "${name}" ${contextStr}`, category: "video", priority: 2 },
@@ -616,47 +640,43 @@ export async function deepWebSearch(
 }
 
 function calculateVisibility(results: DeepSearchResults): "high" | "medium" | "low" | "minimal" {
-  let score = 0;
+  // Simple approach: count total meaningful results across all categories
+  const totalResults = results.totalResults;
 
-  // Profile presence - LinkedIn is most important for professional visibility
-  if (results.summary.hasLinkedIn) score += 15;
-  if (results.summary.hasGitHub) score += 7;
-  if (results.summary.hasTwitter) score += 5;
+  // Count distinct platforms where the person was found
+  const allPlatforms = new Set([
+    ...results.profiles.map(p => p.platform),
+    ...results.news.map(n => n.platform),
+    ...results.publications.map(p => p.platform),
+    ...results.speaking.map(s => s.platform),
+    ...results.podcasts.map(p => p.platform),
+    ...results.videos.map(v => v.platform),
+    ...results.press.map(p => p.platform),
+    ...results.mentions.map(m => m.platform),
+  ]);
 
-  // Multiple profiles indicate strong presence
-  const uniquePlatforms = new Set(results.profiles.map(p => p.platform));
-  score += Math.min(uniquePlatforms.size * 3, 15);
+  const platformCount = allPlatforms.size;
 
-  // News coverage
-  score += Math.min(results.news.length * 3, 20);
+  // Weight categories by importance
+  const categoryScore =
+    results.profiles.length * 3 +      // Social/professional profiles
+    results.news.length * 4 +          // News coverage is high value
+    results.publications.length * 5 +  // Publications/research
+    results.speaking.length * 4 +      // Speaking engagements
+    results.patents.length * 5 +       // Patents
+    results.awards.length * 3 +        // Awards/recognition
+    results.podcasts.length * 3 +      // Podcast appearances
+    results.videos.length * 2 +        // Video content
+    results.press.length * 3 +         // Press mentions
+    results.opensource.length * 2 +    // Open source
+    results.mentions.length * 1;       // General mentions
 
-  // Publications (high value for thought leadership)
-  score += Math.min(results.publications.length * 5, 15);
+  // Decision: if person shows up in multiple places, they have web presence
+  // Even 3-4 distinct results across different platforms = "low" presence (not "minimal")
 
-  // Speaking engagements
-  score += Math.min(results.speaking.length * 4, 12);
-
-  // Patents (high value)
-  score += Math.min(results.patents.length * 6, 12);
-
-  // Awards
-  score += Math.min(results.awards.length * 3, 9);
-
-  // Press coverage
-  score += Math.min(results.press.length * 3, 9);
-
-  // Video content
-  score += Math.min(results.videos.length * 2, 8);
-
-  // Open source
-  score += Math.min(results.opensource.length * 2, 8);
-
-  // General mentions
-  score += Math.min(results.mentions.length, 10);
-
-  if (score >= 60) return "high";
-  if (score >= 30) return "medium";
-  if (score >= 12) return "low";
+  if (categoryScore >= 40 || platformCount >= 6) return "high";
+  if (categoryScore >= 20 || platformCount >= 4) return "medium";
+  if (categoryScore >= 5 || platformCount >= 2 || totalResults >= 3) return "low";
   return "minimal";
 }
 
