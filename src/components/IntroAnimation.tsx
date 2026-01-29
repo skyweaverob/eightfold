@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface IntroAnimationProps {
   onComplete: () => void;
@@ -8,15 +9,22 @@ interface IntroAnimationProps {
 
 export function IntroAnimation({ onComplete }: IntroAnimationProps) {
   const [phase, setPhase] = useState<"cube" | "spin" | "hammer" | "shatter" | "zoom" | "done">("cube");
+  const isMobile = useIsMobile();
+
+  // Responsive sizes
+  const cubeSize = isMobile ? 180 : 320;
+  const cubeHalf = cubeSize / 2;
+  const pieceCount = isMobile ? 80 : 150;
+  const spreadMultiplier = isMobile ? 0.5 : 1;
 
   useEffect(() => {
     // 8 second dramatic intro with spin
     const timeline = [
-      { phase: "spin" as const, delay: 500 },         // Start spinning
-      { phase: "hammer" as const, delay: 3500 },      // Hammer winds up after spin
-      { phase: "shatter" as const, delay: 4300 },     // Impact
-      { phase: "zoom" as const, delay: 6800 },        // Pieces fly, text reveals
-      { phase: "done" as const, delay: 8000 },        // Zoom into app
+      { phase: "spin" as const, delay: 500 },
+      { phase: "hammer" as const, delay: 3500 },
+      { phase: "shatter" as const, delay: 4300 },
+      { phase: "zoom" as const, delay: 6800 },
+      { phase: "done" as const, delay: 8000 },
     ];
 
     const timers = timeline.map(({ phase: p, delay }) =>
@@ -32,33 +40,31 @@ export function IntroAnimation({ onComplete }: IntroAnimationProps) {
     }
   }, [phase, onComplete]);
 
-  // Generate MANY shatter pieces for violent explosion
-  const pieces = useMemo(() => Array.from({ length: 150 }, (_, i) => ({
+  // Generate shatter pieces - fewer on mobile
+  const pieces = useMemo(() => Array.from({ length: pieceCount }, (_, i) => ({
     id: i,
-    // Much larger spread for violent explosion
-    x: (Math.random() - 0.5) * 2000,
-    y: (Math.random() - 0.5) * 2000,
-    z: Math.random() * 1500 - 750,
+    x: (Math.random() - 0.5) * 2000 * spreadMultiplier,
+    y: (Math.random() - 0.5) * 2000 * spreadMultiplier,
+    z: (Math.random() * 1500 - 750) * spreadMultiplier,
     rotateX: Math.random() * 1440 - 720,
     rotateY: Math.random() * 1440 - 720,
     rotateZ: Math.random() * 1440 - 720,
     scale: Math.random() * 0.3 + 0.1,
     delay: Math.random() * 0.15,
-    // Varied piece sizes for realism
-    size: Math.random() * 30 + 10,
-  })), []);
+    size: (Math.random() * 30 + 10) * (isMobile ? 0.6 : 1),
+  })), [pieceCount, spreadMultiplier, isMobile]);
 
   return (
     <div
       className={`fixed inset-0 bg-black z-[9999] flex items-center justify-center overflow-hidden transition-all ${
         phase === "zoom" ? "scale-[30] opacity-0 duration-[1200ms]" : "scale-100 opacity-100 duration-700"
       }`}
-      style={{ perspective: "1500px" }}
+      style={{ perspective: isMobile ? "800px" : "1500px" }}
     >
       {/* Ambient glow */}
       <div className="absolute inset-0 bg-gradient-radial from-gray-900 via-black to-black" />
 
-      {/* The Cube - AI-Driven Hiring - BIG SHINY BLACK BOX */}
+      {/* The Cube - AI-Driven Hiring */}
       <div
         className={`relative ${
           phase === "shatter" || phase === "zoom" ? "opacity-0 scale-0 transition-all duration-700" : "opacity-100"
@@ -68,22 +74,26 @@ export function IntroAnimation({ onComplete }: IntroAnimationProps) {
           transform: phase === "cube"
             ? "rotateX(-20deg) rotateY(-30deg)"
             : phase === "spin"
-              ? undefined // Let animation handle it
+              ? undefined
               : phase === "hammer"
                 ? "rotateX(-20deg) rotateY(-30deg) scale(1.05)"
                 : "rotateX(-20deg) rotateY(-30deg) scale(1.05)",
         }}
       >
-        {/* Cube faces - MUCH BIGGER 320px */}
+        {/* Cube faces */}
         <div
-          className="relative w-80 h-80"
-          style={{ transformStyle: "preserve-3d" }}
+          style={{
+            width: `${cubeSize}px`,
+            height: `${cubeSize}px`,
+            transformStyle: "preserve-3d",
+            position: "relative",
+          }}
         >
-          {/* Front face - Glossy black with reflection */}
+          {/* Front face */}
           <div
             className="absolute inset-0 flex items-center justify-center overflow-hidden"
             style={{
-              transform: "translateZ(160px)",
+              transform: `translateZ(${cubeHalf}px)`,
               background: "linear-gradient(145deg, #1a1a1a 0%, #0a0a0a 50%, #000000 100%)",
               boxShadow: "inset 0 0 100px rgba(255,255,255,0.05), 0 0 60px rgba(0,0,0,0.8)",
               border: "1px solid rgba(255,255,255,0.1)",
@@ -95,7 +105,7 @@ export function IntroAnimation({ onComplete }: IntroAnimationProps) {
                 background: "linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%, transparent 100%)",
               }}
             />
-            <span className="text-gray-300 text-2xl font-bold tracking-wider text-center px-6 relative z-10">
+            <span className={`text-gray-300 ${isMobile ? "text-lg" : "text-2xl"} font-bold tracking-wider text-center px-4 relative z-10`}>
               AI-DRIVEN<br />HIRING
             </span>
           </div>
@@ -103,12 +113,12 @@ export function IntroAnimation({ onComplete }: IntroAnimationProps) {
           <div
             className="absolute inset-0 flex items-center justify-center overflow-hidden"
             style={{
-              transform: "translateZ(-160px) rotateY(180deg)",
+              transform: `translateZ(-${cubeHalf}px) rotateY(180deg)`,
               background: "linear-gradient(145deg, #0d0d0d 0%, #000000 100%)",
               border: "1px solid rgba(255,255,255,0.05)",
             }}
           >
-            <span className="text-gray-300 text-2xl font-bold tracking-wider text-center px-6 relative z-10">
+            <span className={`text-gray-300 ${isMobile ? "text-lg" : "text-2xl"} font-bold tracking-wider text-center px-4 relative z-10`}>
               AI-DRIVEN<br />HIRING
             </span>
           </div>
@@ -116,7 +126,7 @@ export function IntroAnimation({ onComplete }: IntroAnimationProps) {
           <div
             className="absolute inset-0 flex items-center justify-center overflow-hidden"
             style={{
-              transform: "rotateY(-90deg) translateZ(160px)",
+              transform: `rotateY(-90deg) translateZ(${cubeHalf}px)`,
               background: "linear-gradient(180deg, #1a1a1a 0%, #080808 100%)",
               boxShadow: "inset 0 0 60px rgba(255,255,255,0.03)",
               border: "1px solid rgba(255,255,255,0.08)",
@@ -128,7 +138,7 @@ export function IntroAnimation({ onComplete }: IntroAnimationProps) {
                 background: "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 40%)",
               }}
             />
-            <span className="text-gray-300 text-2xl font-bold tracking-wider text-center px-6 relative z-10">
+            <span className={`text-gray-300 ${isMobile ? "text-lg" : "text-2xl"} font-bold tracking-wider text-center px-4 relative z-10`}>
               AI-DRIVEN<br />HIRING
             </span>
           </div>
@@ -136,21 +146,21 @@ export function IntroAnimation({ onComplete }: IntroAnimationProps) {
           <div
             className="absolute inset-0 flex items-center justify-center overflow-hidden"
             style={{
-              transform: "rotateY(90deg) translateZ(160px)",
+              transform: `rotateY(90deg) translateZ(${cubeHalf}px)`,
               background: "linear-gradient(180deg, #151515 0%, #050505 100%)",
               boxShadow: "inset 0 0 60px rgba(255,255,255,0.03)",
               border: "1px solid rgba(255,255,255,0.08)",
             }}
           >
-            <span className="text-gray-300 text-2xl font-bold tracking-wider text-center px-6 relative z-10">
+            <span className={`text-gray-300 ${isMobile ? "text-lg" : "text-2xl"} font-bold tracking-wider text-center px-4 relative z-10`}>
               AI-DRIVEN<br />HIRING
             </span>
           </div>
-          {/* Top face - Glossiest */}
+          {/* Top face */}
           <div
             className="absolute inset-0 flex items-center justify-center overflow-hidden"
             style={{
-              transform: "rotateX(90deg) translateZ(160px)",
+              transform: `rotateX(90deg) translateZ(${cubeHalf}px)`,
               background: "linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 30%, #0a0a0a 100%)",
               boxShadow: "inset 0 0 80px rgba(255,255,255,0.08)",
               border: "1px solid rgba(255,255,255,0.12)",
@@ -162,7 +172,7 @@ export function IntroAnimation({ onComplete }: IntroAnimationProps) {
                 background: "linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.05) 30%, transparent 60%)",
               }}
             />
-            <span className="text-gray-300 text-2xl font-bold tracking-wider text-center px-6 relative z-10">
+            <span className={`text-gray-300 ${isMobile ? "text-lg" : "text-2xl"} font-bold tracking-wider text-center px-4 relative z-10`}>
               AI-DRIVEN<br />HIRING
             </span>
           </div>
@@ -170,54 +180,59 @@ export function IntroAnimation({ onComplete }: IntroAnimationProps) {
           <div
             className="absolute inset-0 flex items-center justify-center overflow-hidden"
             style={{
-              transform: "rotateX(-90deg) translateZ(160px)",
+              transform: `rotateX(-90deg) translateZ(${cubeHalf}px)`,
               background: "#000000",
               border: "1px solid rgba(255,255,255,0.03)",
             }}
           >
-            <span className="text-gray-300 text-2xl font-bold tracking-wider text-center px-6 relative z-10">
+            <span className={`text-gray-300 ${isMobile ? "text-lg" : "text-2xl"} font-bold tracking-wider text-center px-4 relative z-10`}>
               AI-DRIVEN<br />HIRING
             </span>
           </div>
         </div>
       </div>
 
-      {/* The Hammer - BOX BREAKER - Bigger, more dramatic */}
+      {/* The Hammer - BOX BREAKER */}
       <div
         className={`absolute transition-all ease-in ${
           phase === "cube" || phase === "spin"
-            ? "translate-x-[400px] -translate-y-[350px] rotate-[-60deg] opacity-0 duration-[1200ms]"
+            ? isMobile
+              ? "translate-x-[200px] -translate-y-[180px] rotate-[-60deg] opacity-0 duration-[1200ms]"
+              : "translate-x-[400px] -translate-y-[350px] rotate-[-60deg] opacity-0 duration-[1200ms]"
             : phase === "hammer"
-              ? "translate-x-[-20px] translate-y-[20px] rotate-[25deg] opacity-100 duration-[700ms]"
+              ? isMobile
+                ? "translate-x-[-10px] translate-y-[10px] rotate-[25deg] opacity-100 duration-[700ms]"
+                : "translate-x-[-20px] translate-y-[20px] rotate-[25deg] opacity-100 duration-[700ms]"
               : "opacity-0 scale-[2] duration-300"
         }`}
         style={{
           transformOrigin: "bottom right",
         }}
       >
-        {/* Hammer head - Bigger and bolder */}
+        {/* Hammer head */}
         <div className="relative">
           <div
-            className="w-52 h-24 rounded-xl flex items-center justify-center"
+            className={`${isMobile ? "w-32 h-14" : "w-52 h-24"} rounded-xl flex items-center justify-center`}
             style={{
               background: "linear-gradient(180deg, #3b82f6 0%, #1d4ed8 50%, #1e40af 100%)",
-              boxShadow: "0 0 80px rgba(59, 130, 246, 0.6), 0 0 40px rgba(59, 130, 246, 0.4), inset 0 2px 0 rgba(255,255,255,0.2)",
+              boxShadow: isMobile
+                ? "0 0 40px rgba(59, 130, 246, 0.6), 0 0 20px rgba(59, 130, 246, 0.4), inset 0 2px 0 rgba(255,255,255,0.2)"
+                : "0 0 80px rgba(59, 130, 246, 0.6), 0 0 40px rgba(59, 130, 246, 0.4), inset 0 2px 0 rgba(255,255,255,0.2)",
             }}
           >
-            {/* Glossy reflection */}
             <div
               className="absolute inset-0 rounded-xl opacity-40"
               style={{
                 background: "linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 50%)",
               }}
             />
-            <span className="text-white text-sm font-black tracking-[0.2em] relative z-10">
+            <span className={`text-white ${isMobile ? "text-xs" : "text-sm"} font-black tracking-[0.2em] relative z-10`}>
               BOX BREAKER
             </span>
           </div>
-          {/* Hammer handle - Thicker */}
+          {/* Hammer handle */}
           <div
-            className="absolute top-full left-1/2 -translate-x-1/2 w-6 h-48 rounded-b-xl"
+            className={`absolute top-full left-1/2 -translate-x-1/2 ${isMobile ? "w-4 h-28" : "w-6 h-48"} rounded-b-xl`}
             style={{
               background: "linear-gradient(90deg, #92400e 0%, #b45309 30%, #d97706 50%, #b45309 70%, #92400e 100%)",
               boxShadow: "inset 2px 0 4px rgba(255,255,255,0.1), inset -2px 0 4px rgba(0,0,0,0.2)",
@@ -226,9 +241,9 @@ export function IntroAnimation({ onComplete }: IntroAnimationProps) {
         </div>
       </div>
 
-      {/* Shatter pieces - VIOLENT EXPLOSION */}
+      {/* Shatter pieces */}
       {(phase === "shatter" || phase === "zoom") && (
-        <div className="absolute inset-0 flex items-center justify-center" style={{ perspective: "2000px" }}>
+        <div className="absolute inset-0 flex items-center justify-center" style={{ perspective: isMobile ? "1000px" : "2000px" }}>
           {pieces.map((piece) => (
             <div
               key={piece.id}
@@ -254,30 +269,31 @@ export function IntroAnimation({ onComplete }: IntroAnimationProps) {
         </div>
       )}
 
-      {/* Impact flash - More dramatic with multiple layers */}
+      {/* Impact flash */}
       {phase === "hammer" && (
         <>
           <div className="absolute inset-0 bg-white animate-flash-white" />
           <div className="absolute inset-0 bg-blue-500 animate-flash" />
-          {/* Shockwave ring */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-0 h-0 rounded-full border-4 border-blue-400 animate-shockwave" />
+            <div className={`w-0 h-0 rounded-full border-4 border-blue-400 ${isMobile ? "animate-shockwave-mobile" : "animate-shockwave"}`} />
           </div>
         </>
       )}
 
-      {/* Text reveal after shatter - Bigger and bolder */}
+      {/* Text reveal after shatter */}
       {(phase === "shatter" || phase === "zoom") && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center animate-fadeIn">
+        <div className="absolute inset-0 flex flex-col items-center justify-center animate-fadeIn px-4">
           <h1
-            className="text-8xl font-black text-white tracking-tight mb-6"
+            className={`${isMobile ? "text-4xl" : "text-8xl"} font-black text-white tracking-tight mb-4 md:mb-6 text-center`}
             style={{
-              textShadow: "0 0 60px rgba(59, 130, 246, 0.5), 0 0 120px rgba(59, 130, 246, 0.3)",
+              textShadow: isMobile
+                ? "0 0 30px rgba(59, 130, 246, 0.5), 0 0 60px rgba(59, 130, 246, 0.3)"
+                : "0 0 60px rgba(59, 130, 246, 0.5), 0 0 120px rgba(59, 130, 246, 0.3)",
             }}
           >
             BOX BREAKER
           </h1>
-          <p className="text-2xl text-gray-300 font-light tracking-wide">
+          <p className={`${isMobile ? "text-lg" : "text-2xl"} text-gray-300 font-light tracking-wide text-center`}>
             Break HR&apos;s Black Box.
           </p>
         </div>
@@ -346,8 +362,27 @@ export function IntroAnimation({ onComplete }: IntroAnimationProps) {
           }
         }
 
+        @keyframes shockwave-mobile {
+          0% {
+            width: 0;
+            height: 0;
+            opacity: 1;
+            border-width: 6px;
+          }
+          100% {
+            width: 400px;
+            height: 400px;
+            opacity: 0;
+            border-width: 1px;
+          }
+        }
+
         .animate-shockwave {
           animation: shockwave 0.6s ease-out forwards;
+        }
+
+        .animate-shockwave-mobile {
+          animation: shockwave-mobile 0.6s ease-out forwards;
         }
 
         @keyframes fadeIn {
