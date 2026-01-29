@@ -127,15 +127,15 @@ export function AnalysisDashboard({
             <div className="text-2xl md:text-3xl font-bold text-blue-500 mb-0.5 md:mb-1 tracking-tight">
               {analysis.marketPosition.overallScore}
             </div>
-            <div className="text-xs md:text-sm font-medium text-gray-500">Score</div>
+            <div className="text-xs md:text-sm font-medium text-gray-500">Market Score</div>
           </CardContent>
         </Card>
         <Card className="bg-white border-0 shadow-md shadow-gray-200/50 rounded-xl overflow-hidden">
           <CardContent className="py-3 md:py-5 px-2 md:px-4 text-center">
             <div className="text-2xl md:text-3xl font-bold text-gray-900 mb-0.5 md:mb-1 tracking-tight">
-              {analysis.career.yearsOfExperience}
+              {analysis.career.yearsOfExperience}<span className="text-lg md:text-xl font-medium text-gray-400">yr</span>
             </div>
-            <div className="text-xs md:text-sm font-medium text-gray-500">Years</div>
+            <div className="text-xs md:text-sm font-medium text-gray-500">Experience</div>
           </CardContent>
         </Card>
         <Card className="bg-white border-0 shadow-md shadow-gray-200/50 rounded-xl overflow-hidden">
@@ -143,10 +143,15 @@ export function AnalysisDashboard({
             <div className="text-2xl md:text-3xl font-bold text-green-500 mb-0.5 md:mb-1 tracking-tight">
               {formatSalary(derivedSalaryEstimate.median)}
             </div>
-            <div className="text-xs md:text-sm font-medium text-gray-500">Salary</div>
+            <div className="text-xs md:text-sm font-medium text-gray-500">Est. Salary</div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Stats Explanation */}
+      <p className="text-xs text-gray-400 text-center -mt-3 md:-mt-2">
+        AI-generated estimates based on your resume and web presence
+      </p>
 
       {/* Skills Analysis - Collapsible */}
       <Collapsible
