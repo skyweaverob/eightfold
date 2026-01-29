@@ -5,13 +5,14 @@ import { FileUpload } from "@/components/FileUpload";
 import { AnalysisDashboard } from "@/components/AnalysisDashboard";
 import { Stepper } from "@/components/ui/stepper";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import type { ProfileAnalysis, ParsedResume, WebPresenceResult, SalaryEstimate } from "@/types";
+import type { ProfileAnalysis, ParsedResume, WebPresenceResult, SalaryEstimate, DeepSearchResults } from "@/types";
 
 interface AnalysisResult {
   parsedResume: ParsedResume;
   webPresence: WebPresenceResult[];
   analysis: ProfileAnalysis;
   salaryEstimate?: SalaryEstimate;
+  deepSearchResults?: DeepSearchResults;
 }
 
 interface ProgressStep {
@@ -111,53 +112,53 @@ export default function Home() {
   // Upload/Analysis Screen
   if (!result) {
     return (
-      <div className="min-h-screen bg-[var(--background)] flex flex-col">
+      <div className="min-h-screen bg-white flex flex-col">
         {/* Minimal header - only shows during analysis or with results */}
         {isLoading && (
-          <header className="py-4 border-b border-[var(--border-light)]">
-            <div className="container mx-auto px-4">
-              <span className="text-headline text-[var(--text-primary)]">
+          <header className="py-5 border-b border-gray-100 glass sticky top-0 z-50">
+            <div className="container mx-auto px-6">
+              <span className="text-xl font-semibold text-gray-900 tracking-tight">
                 Profile Mirror
               </span>
             </div>
           </header>
         )}
 
-        <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+        <main className="flex-1 flex flex-col items-center justify-center px-6 py-16">
           {!isLoading ? (
             // Upload Screen - Pure focus
-            <div className="w-full max-w-md text-center">
-              <h1 className="text-title-1 text-[var(--text-primary)] mb-2">
+            <div className="w-full max-w-lg text-center">
+              <h1 className="text-5xl font-bold text-gray-900 mb-3 tracking-tight">
                 Profile Mirror
               </h1>
-              <p className="text-subhead text-[var(--text-secondary)] mb-12">
+              <p className="text-xl text-gray-500 mb-14 font-normal">
                 Know what they know.
               </p>
 
               <FileUpload onFileSelect={handleFileSelect} isLoading={isLoading} />
 
               {error && (
-                <div className="mt-6 p-4 bg-[var(--error-light)] rounded-[var(--radius-md)]">
-                  <p className="text-footnote text-[var(--error)]">{error}</p>
+                <div className="mt-8 p-5 bg-red-50 border border-red-100 rounded-2xl">
+                  <p className="text-base text-red-600">{error}</p>
                 </div>
               )}
             </div>
           ) : (
             // Analyzing Screen
-            <div className="w-full max-w-lg text-center">
-              <h2 className="text-title-2 text-[var(--text-primary)] mb-8">
-                Analyzing
+            <div className="w-full max-w-xl text-center">
+              <h2 className="text-3xl font-semibold text-gray-900 mb-10 tracking-tight">
+                Analyzing your profile
               </h2>
 
-              <Stepper steps={STEPS} currentStep={currentStepNum} className="mb-8" />
+              <Stepper steps={STEPS} currentStep={currentStepNum} className="mb-10" />
 
-              <div className="py-8">
-                <Loader2 className="w-8 h-8 animate-spin text-[var(--accent)] mx-auto mb-4" />
-                <p className="text-headline text-[var(--text-primary)]">
+              <div className="py-10">
+                <Loader2 className="w-10 h-10 animate-spin text-blue-500 mx-auto mb-5" />
+                <p className="text-xl font-medium text-gray-900">
                   {currentMessage}
                 </p>
                 {currentDetail && (
-                  <p className="text-footnote text-[var(--text-secondary)] mt-2">
+                  <p className="text-base text-gray-500 mt-3">
                     {currentDetail}
                   </p>
                 )}
@@ -167,8 +168,8 @@ export default function Home() {
         </main>
 
         {!isLoading && (
-          <footer className="py-6 text-center">
-            <p className="text-caption text-[var(--text-tertiary)]">
+          <footer className="py-8 text-center">
+            <p className="text-sm text-gray-400 font-normal">
               Your resume is processed securely and not stored.
             </p>
           </footer>
@@ -179,16 +180,16 @@ export default function Home() {
 
   // Results Screen
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className="min-h-screen gradient-subtle">
       {/* Header with identity */}
-      <header className="py-4 border-b border-[var(--border-light)] sticky top-0 bg-[var(--background)] z-50">
-        <div className="container mx-auto px-4 flex items-center justify-between">
+      <header className="py-5 border-b border-gray-100 sticky top-0 glass z-50">
+        <div className="container mx-auto px-6 flex items-center justify-between">
           <div>
-            <h1 className="text-headline text-[var(--text-primary)]">
+            <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
               {result.parsedResume.fullName || "Profile Mirror"}
             </h1>
             {result.parsedResume.email && (
-              <p className="text-caption text-[var(--text-secondary)]">
+              <p className="text-sm text-gray-500 mt-0.5">
                 {result.parsedResume.email}
                 {result.parsedResume.location && ` · ${result.parsedResume.location}`}
               </p>
@@ -196,26 +197,27 @@ export default function Home() {
           </div>
           <button
             onClick={handleReset}
-            className="flex items-center gap-1.5 text-footnote text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+            className="flex items-center gap-2 text-base text-gray-500 hover:text-gray-900 transition-colors font-medium"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-5 h-5" />
             New Analysis
           </button>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-6 py-10">
         <AnalysisDashboard
           analysis={result.analysis}
           resume={result.parsedResume}
           webPresence={result.webPresence}
           salaryEstimate={result.salaryEstimate}
+          deepSearchResults={result.deepSearchResults}
         />
       </main>
 
-      <footer className="py-6 border-t border-[var(--border-light)]">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-caption text-[var(--text-tertiary)]">
+      <footer className="py-8 border-t border-gray-100 bg-white">
+        <div className="container mx-auto px-6 text-center">
+          <p className="text-sm text-gray-400">
             Profile Mirror — Know what they know.
           </p>
         </div>

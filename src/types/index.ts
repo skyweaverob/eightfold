@@ -250,3 +250,53 @@ export interface ParsePreview {
   };
   parseIssues: string[];
 }
+
+// Deep Web Search Types
+export interface CatalogedSearchResult {
+  category:
+    | "profile"
+    | "news"
+    | "publication"
+    | "speaking"
+    | "patent"
+    | "award"
+    | "podcast"
+    | "video"
+    | "opensource"
+    | "press"
+    | "mention"
+    | "other";
+  platform: string;
+  url: string;
+  title: string;
+  snippet: string;
+  date?: string;
+  source?: string;
+  relevanceScore: number;
+  searchQuery: string;
+}
+
+export interface DeepSearchResults {
+  profiles: CatalogedSearchResult[];
+  news: CatalogedSearchResult[];
+  publications: CatalogedSearchResult[];
+  speaking: CatalogedSearchResult[];
+  patents: CatalogedSearchResult[];
+  awards: CatalogedSearchResult[];
+  podcasts: CatalogedSearchResult[];
+  videos: CatalogedSearchResult[];
+  opensource: CatalogedSearchResult[];
+  press: CatalogedSearchResult[];
+  mentions: CatalogedSearchResult[];
+  totalResults: number;
+  searchesPerformed: number;
+  summary: {
+    hasLinkedIn: boolean;
+    hasGitHub: boolean;
+    hasTwitter: boolean;
+    newsCount: number;
+    publicationCount: number;
+    speakingCount: number;
+    overallVisibility: "high" | "medium" | "low" | "minimal";
+  };
+}

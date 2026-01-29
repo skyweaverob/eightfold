@@ -32,8 +32,8 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
                   className={cn(
                     "absolute h-0.5 -translate-y-4",
                     isComplete || isCurrent
-                      ? "bg-[var(--accent)]"
-                      : "bg-[var(--surface)]"
+                      ? "bg-blue-600"
+                      : "bg-gray-200"
                   )}
                   style={{
                     left: `${((index - 0.5) / steps.length) * 100}%`,
@@ -46,9 +46,9 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
               <div
                 className={cn(
                   "w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-medium transition-all duration-200",
-                  isComplete && "bg-[var(--success)] text-white",
-                  isCurrent && "bg-[var(--accent)] text-white",
-                  isPending && "bg-[var(--surface)] text-[var(--text-tertiary)]"
+                  isComplete && "bg-green-600 text-white",
+                  isCurrent && "bg-blue-600 text-white",
+                  isPending && "bg-gray-100 text-gray-400"
                 )}
               >
                 {isComplete ? (
@@ -63,10 +63,10 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
               {/* Step label */}
               <span
                 className={cn(
-                  "text-caption mt-1.5 text-center hidden sm:block",
+                  "text-xs mt-1.5 text-center hidden sm:block",
                   isCurrent
-                    ? "text-[var(--text-primary)] font-medium"
-                    : "text-[var(--text-tertiary)]"
+                    ? "text-gray-900 font-medium"
+                    : "text-gray-400"
                 )}
               >
                 {step.label}

@@ -12,8 +12,8 @@ interface MarketValueProps {
 
 export function MarketValue({ salary, title, className }: MarketValueProps) {
   return (
-    <Card className={className}>
-      <CardContent className="pt-8 pb-8">
+    <Card className={`bg-white border-0 shadow-lg shadow-gray-200/50 rounded-2xl overflow-hidden ${className || ""}`}>
+      <CardContent className="pt-10 pb-10 px-8">
         <SalaryRange
           label="Your Market Value"
           min={salary.min}

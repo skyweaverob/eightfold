@@ -33,13 +33,9 @@ export function SalaryRange({
   percentile,
   className,
 }: SalaryRangeProps) {
-  // Calculate position percentages for the target range within the full range
   const range = max - min;
   const targetLeftPercent = targetMin
     ? ((targetMin - min) / range) * 100
-    : null;
-  const targetRightPercent = targetMax
-    ? ((max - targetMax) / range) * 100
     : null;
   const targetWidthPercent =
     targetMin && targetMax ? ((targetMax - targetMin) / range) * 100 : null;
@@ -47,16 +43,16 @@ export function SalaryRange({
   return (
     <div className={cn("w-full", className)}>
       {label && (
-        <h3 className="text-title-2 text-center mb-2">{label}</h3>
+        <h3 className="text-2xl font-semibold text-gray-900 text-center mb-3 tracking-tight">{label}</h3>
       )}
 
       {/* Main salary display */}
-      <div className="text-center mb-4">
-        <div className="text-display text-[var(--text-primary)]">
+      <div className="text-center mb-6">
+        <div className="text-5xl font-bold text-gray-900 tracking-tight">
           {formatSalary(targetMin || min)} — {formatSalary(targetMax || max)}
         </div>
         {location && (
-          <div className="text-subhead text-[var(--text-secondary)] mt-1">
+          <div className="text-base text-gray-500 mt-2">
             {location}
           </div>
         )}
@@ -65,11 +61,11 @@ export function SalaryRange({
       {/* Range visualization */}
       <div className="relative px-4">
         {/* Track */}
-        <div className="h-2 bg-[var(--surface)] rounded-full relative">
+        <div className="h-3 bg-gray-100 rounded-full relative">
           {/* Target range highlight */}
           {targetWidthPercent !== null && (
             <div
-              className="absolute h-full bg-[var(--accent)] rounded-full"
+              className="absolute h-full bg-blue-500 rounded-full transition-all duration-700"
               style={{
                 left: `${targetLeftPercent}%`,
                 width: `${targetWidthPercent}%`,
@@ -79,11 +75,11 @@ export function SalaryRange({
         </div>
 
         {/* Min/Max labels */}
-        <div className="flex justify-between mt-2">
-          <span className="text-footnote text-[var(--text-tertiary)]">
+        <div className="flex justify-between mt-3">
+          <span className="text-base text-gray-400">
             {formatSalary(min)}
           </span>
-          <span className="text-footnote text-[var(--text-tertiary)]">
+          <span className="text-base text-gray-400">
             {formatSalary(max)}
           </span>
         </div>
@@ -91,10 +87,10 @@ export function SalaryRange({
 
       {/* Percentile info */}
       {percentile && (
-        <div className="text-center mt-4">
-          <span className="text-subhead text-[var(--text-secondary)]">
+        <div className="text-center mt-5">
+          <span className="text-base text-gray-500">
             Your profile suggests{" "}
-            <span className="font-medium text-[var(--text-primary)]">
+            <span className="font-semibold text-gray-900">
               {percentile.low}th–{percentile.high}th
             </span>{" "}
             percentile

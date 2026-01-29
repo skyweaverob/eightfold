@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
 import { extractTextFromPdf } from "@/lib/api/pdfco";
 import { parseResumeWithAI, analyzeProfile } from "@/lib/api/claude";
-import { findProfessionalProfiles } from "@/lib/api/serpapi";
+import { deepWebSearch, summarizeDeepSearchForAnalysis } from "@/lib/api/serpapi";
 import { getLinkedInProfile, lookupLinkedInByEmail } from "@/lib/api/brightdata";
 import { getSkillDemand } from "@/lib/api/jobspikr";
-import type { LinkedInProfile, WebPresenceResult } from "@/types";
+import type { LinkedInProfile, WebPresenceResult, DeepSearchResults } from "@/types";
 
-export const maxDuration = 60;
+export const maxDuration = 120; // Increased for deeper searches
 
 export async function POST(request: NextRequest) {
   const encoder = new TextEncoder();
@@ -64,29 +64,73 @@ export async function POST(request: NextRequest) {
         const parsedResume = await parseResumeWithAI(rawText);
         sendProgress(2, "Resume parsed successfully", `Found ${parsedResume.skills?.length || 0} skills and ${parsedResume.experience?.length || 0} work experiences`);
 
-        // Step 3: Search for web presence
-        sendProgress(3, "Searching for your web presence...", "Looking for profiles on LinkedIn, GitHub, Twitter, and more");
+        // Step 3: Deep web search - comprehensive Google searches
+        sendProgress(3, "Performing deep web search...", "Searching Google for profiles, news, publications, speaking engagements, patents, and more");
         const searchContext = {
           company: parsedResume.experience?.[0]?.company,
           title: parsedResume.experience?.[0]?.title,
           location: parsedResume.location || undefined,
           email: parsedResume.email || undefined,
+          skills: parsedResume.skills?.slice(0, 10).map(s => s.name),
+          industry: parsedResume.experience?.[0]?.description?.split(" ").slice(0, 5).join(" "),
         };
 
+        let deepSearchResults: DeepSearchResults | null = null;
         let webPresence: WebPresenceResult[] = [];
         let linkedInProfile: LinkedInProfile | null = null;
 
         try {
           if (parsedResume.fullName) {
-            webPresence = await findProfessionalProfiles(
-              parsedResume.fullName,
-              searchContext
+            // Perform comprehensive deep web search
+            deepSearchResults = await deepWebSearch(parsedResume.fullName, searchContext);
+
+            sendProgress(
+              3,
+              "Deep search complete",
+              `Found ${deepSearchResults.totalResults} results across ${deepSearchResults.searchesPerformed} searches (${deepSearchResults.summary.overallVisibility} visibility)`
             );
-            sendProgress(3, "Web search complete", `Found ${webPresence.length} potential profiles`);
+
+            // Convert deep search profiles to legacy WebPresenceResult format for backward compatibility
+            webPresence = deepSearchResults.profiles.map(p => ({
+              platform: p.platform,
+              url: p.url,
+              title: p.title,
+              description: p.snippet,
+            }));
+
+            // Add top news items to web presence
+            for (const news of deepSearchResults.news.slice(0, 5)) {
+              webPresence.push({
+                platform: `news:${news.platform}`,
+                url: news.url,
+                title: news.title,
+                description: news.snippet,
+              });
+            }
+
+            // Add notable items from other categories
+            const notableItems = [
+              ...deepSearchResults.publications.slice(0, 3).map(p => ({ ...p, categoryLabel: "publication" })),
+              ...deepSearchResults.speaking.slice(0, 3).map(p => ({ ...p, categoryLabel: "speaking" })),
+              ...deepSearchResults.awards.slice(0, 2).map(p => ({ ...p, categoryLabel: "award" })),
+              ...deepSearchResults.press.slice(0, 3).map(p => ({ ...p, categoryLabel: "press" })),
+              ...deepSearchResults.patents.slice(0, 2).map(p => ({ ...p, categoryLabel: "patent" })),
+              ...deepSearchResults.videos.slice(0, 2).map(p => ({ ...p, categoryLabel: "video" })),
+              ...deepSearchResults.opensource.slice(0, 3).map(p => ({ ...p, categoryLabel: "opensource" })),
+            ];
+
+            for (const item of notableItems) {
+              webPresence.push({
+                platform: `${item.categoryLabel}:${item.platform}`,
+                url: item.url,
+                title: item.title,
+                description: item.snippet,
+              });
+            }
           }
 
           // Try to enrich LinkedIn profile
-          const linkedInResult = webPresence.find((p) => p.platform === "linkedin");
+          const linkedInResult = deepSearchResults?.profiles.find((p) => p.platform === "linkedin");
           if (linkedInResult?.url) {
             sendProgress(3, "Enriching LinkedIn profile...", "Fetching detailed profile data");
             try {
@@ -95,6 +139,7 @@ export async function POST(request: NextRequest) {
               console.error("LinkedIn enrichment failed:", error);
             }
           } else if (parsedResume.email) {
+            sendProgress(3, "Looking up LinkedIn by email...", "Attempting to find LinkedIn profile");
             try {
               const linkedInUrl = await lookupLinkedInByEmail(parsedResume.email);
               if (linkedInUrl) {
@@ -127,24 +172,32 @@ export async function POST(request: NextRequest) {
           console.error("Labor market data fetch failed:", error);
         }
 
-        // Step 5: Generate comprehensive analysis
-        sendProgress(5, "Generating comprehensive analysis...", "AI is creating your personalized career insights");
+        // Step 5: Generate comprehensive analysis with deep search context
+        sendProgress(5, "Generating comprehensive analysis...", "AI is analyzing your profile with deep web search data");
+
+        // Create enhanced analysis context with deep search summary
+        const deepSearchSummary = deepSearchResults
+          ? summarizeDeepSearchForAnalysis(deepSearchResults)
+          : "No deep search results available.";
+
         const analysis = await analyzeProfile(
           parsedResume,
           webPresence,
           linkedInProfile,
-          skillDemands
+          skillDemands,
+          deepSearchSummary
         );
 
-        sendProgress(5, "Analysis complete!", "Your profile report is ready");
+        sendProgress(5, "Analysis complete!", "Your comprehensive profile report is ready");
 
-        // Send final result
+        // Send final result with deep search data
         sendResult({
           parsedResume,
           webPresence,
           linkedInProfile,
           skillDemands,
           analysis,
+          deepSearchResults,
         });
       } catch (error) {
         console.error("Analysis failed:", error);

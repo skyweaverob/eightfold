@@ -109,7 +109,8 @@ export async function analyzeProfile(
   resume: ParsedResume,
   webPresence: WebPresenceResult[],
   linkedInProfile: LinkedInProfile | null,
-  skillDemands: SkillDemand[]
+  skillDemands: SkillDemand[],
+  deepSearchSummary?: string
 ): Promise<ProfileAnalysis> {
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
@@ -130,6 +131,22 @@ ${linkedInProfile ? JSON.stringify(linkedInProfile, null, 2) : "Not found"}
 
 ## Labor Market Skill Demand Data
 ${JSON.stringify(skillDemands, null, 2)}
+
+## Deep Web Search Results
+${deepSearchSummary || "No deep search performed."}
+
+IMPORTANT: Use the deep web search results to significantly inform your analysis. The web search reveals:
+- News coverage and media mentions → indicates thought leadership, visibility, and industry recognition
+- Publications and research → indicates expertise depth and academic credibility
+- Speaking engagements → indicates industry recognition and communication skills
+- Patents → indicates innovation and technical problem-solving
+- Awards and recognition → validates claimed achievements
+- Open source contributions → indicates technical skills and community involvement
+- Press releases and company news → validates career trajectory and role claims
+- Podcast appearances → indicates subject matter expertise and public profile
+- Video content → indicates presentation skills and public engagement
+
+Factor these findings into your assessment. If someone claims to be a thought leader but has minimal web presence, that's a concern. If they have extensive news coverage and speaking engagements, that validates their expertise.
 
 Provide a comprehensive analysis in the following JSON structure:
 {
