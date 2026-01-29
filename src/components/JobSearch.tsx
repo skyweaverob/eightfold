@@ -122,14 +122,14 @@ export function JobSearch({
   return (
     <div className="space-y-5">
       {/* Search Form */}
-      <div className="flex gap-3">
+      <div className="flex flex-col md:flex-row gap-3">
         <input
           type="text"
           placeholder="Job title (e.g., Product Manager)"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          className="flex-1 px-5 py-3.5 border border-gray-200 rounded-xl text-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
+          className="flex-1 px-4 md:px-5 py-3 md:py-3.5 border border-gray-200 rounded-xl text-base md:text-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
         />
         <input
           type="text"
@@ -137,12 +137,12 @@ export function JobSearch({
           value={location}
           onChange={(e) => setLocation(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          className="w-44 px-5 py-3.5 border border-gray-200 rounded-xl text-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
+          className="w-full md:w-44 px-4 md:px-5 py-3 md:py-3.5 border border-gray-200 rounded-xl text-base md:text-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
         />
         <button
           onClick={handleSearch}
           disabled={isSearching || !title.trim() || !location.trim()}
-          className="px-6 py-3.5 bg-blue-500 text-white rounded-xl text-lg font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40"
+          className="w-full md:w-auto px-6 py-3 md:py-3.5 bg-blue-500 text-white rounded-xl text-base md:text-lg font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40"
         >
           {isSearching ? (
             <Loader2 className="w-5 h-5 animate-spin" />

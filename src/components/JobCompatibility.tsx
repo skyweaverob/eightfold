@@ -60,7 +60,7 @@ export function JobCompatibility({
   return (
     <div className="space-y-6">
       {/* Back button and view toggle */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <button
           onClick={onBack}
           className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors"
@@ -71,27 +71,27 @@ export function JobCompatibility({
 
         {/* View Toggle */}
         {compatibility && (
-          <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg">
+          <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg self-start sm:self-auto">
             <button
               onClick={() => setViewMode("candidate")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                 viewMode === "candidate"
                   ? "bg-white text-gray-900 shadow-sm"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              <User className="w-4 h-4" />
-              Your View
+              <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Your</span> View
             </button>
             <button
               onClick={() => setViewMode("hr")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                 viewMode === "hr"
                   ? "bg-white text-gray-900 shadow-sm"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              <Eye className="w-4 h-4" />
+              <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               HR View
             </button>
           </div>

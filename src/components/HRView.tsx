@@ -162,17 +162,17 @@ export function HRView({
       </div>
 
       {/* Job & Candidate Header */}
-      <div className="bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 rounded-2xl p-8 text-white shadow-xl shadow-slate-900/20">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-slate-400 text-base mb-2">Evaluating candidate for</p>
-            <h2 className="text-3xl font-semibold tracking-tight">{job.title}</h2>
-            <p className="text-slate-400 mt-2 text-lg">
+      <div className="bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 rounded-2xl p-5 md:p-8 text-white shadow-xl shadow-slate-900/20">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-slate-400 text-sm md:text-base mb-1 md:mb-2">Evaluating candidate for</p>
+            <h2 className="text-xl md:text-3xl font-semibold tracking-tight">{job.title}</h2>
+            <p className="text-slate-400 mt-1 md:mt-2 text-sm md:text-lg truncate">
               {job.company} · {job.location}
             </p>
           </div>
-          <div className={`px-5 py-2.5 rounded-xl ${recommendation.bg}`}>
-            <span className={`font-semibold text-base ${recommendation.color}`}>
+          <div className={`px-3 md:px-5 py-1.5 md:py-2.5 rounded-lg md:rounded-xl ${recommendation.bg} self-start flex-shrink-0`}>
+            <span className={`font-semibold text-xs md:text-base whitespace-nowrap ${recommendation.color}`}>
               {recommendation.text}
             </span>
           </div>
@@ -194,22 +194,23 @@ export function HRView({
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex gap-1 p-1 bg-gray-100 rounded-xl">
+      <div className="flex gap-1 p-1 bg-gray-100 rounded-xl overflow-x-auto">
         {[
-          { id: "overview", label: "Overview" },
-          { id: "details", label: "Detailed Analysis" },
-          { id: "concerns", label: "Concerns & Flags" },
+          { id: "overview", label: "Overview", mobileLabel: "Overview" },
+          { id: "details", label: "Detailed Analysis", mobileLabel: "Details" },
+          { id: "concerns", label: "Concerns & Flags", mobileLabel: "Flags" },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as typeof activeTab)}
-            className={`flex-1 px-5 py-3 text-base font-medium rounded-lg transition-all ${
+            className={`flex-1 px-3 md:px-5 py-2.5 md:py-3 text-sm md:text-base font-medium rounded-lg transition-all whitespace-nowrap ${
               activeTab === tab.id
                 ? "bg-white text-gray-900 shadow-sm"
                 : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            {tab.label}
+            <span className="hidden sm:inline">{tab.label}</span>
+            <span className="sm:hidden">{tab.mobileLabel}</span>
           </button>
         ))}
       </div>
