@@ -185,6 +185,27 @@ export async function POST(request: NextRequest) {
               const fetchedHeadline = fetchedProfile.headline?.toLowerCase() || "";
               const fetchedCompany = fetchedProfile.experience?.[0]?.company?.toLowerCase() || "";
               const fetchedAllCompanies = fetchedProfile.experience?.map(e => e.company?.toLowerCase()).filter(Boolean) || [];
+              const fetchedConnections = fetchedProfile.connections || 0;
+
+              // SAFETY CHECK 1: Reject student profiles for professional resumes
+              const isStudentProfile = fetchedHeadline.includes("student") || fetchedHeadline.includes("studying");
+              const resumeHasProfessionalExp = resumeTitles.some(t =>
+                t && (t.includes("professor") || t.includes("director") || t.includes("manager") ||
+                      t.includes("engineer") || t.includes("analyst") || t.includes("senior") ||
+                      t.includes("lead") || t.includes("head") || t.includes("vp") || t.includes("chief"))
+              );
+
+              if (isStudentProfile && resumeHasProfessionalExp) {
+                console.log(`  ✗ REJECTED: Student profile ("${fetchedHeadline}") doesn't match professional resume`);
+                continue;
+              }
+
+              // SAFETY CHECK 2: Very low connections for experienced professional
+              const yearsExperience = parsedResume.experience?.length || 0;
+              if (fetchedConnections < 50 && yearsExperience >= 3 && resumeHasProfessionalExp) {
+                console.log(`  ✗ REJECTED: Low connections (${fetchedConnections}) for experienced professional (${yearsExperience} roles)`);
+                continue;
+              }
 
               // Company match: any resume company appears in LinkedIn companies or headline
               const companyMatches = resumeCompanies.some(c => {
@@ -199,21 +220,41 @@ export async function POST(request: NextRequest) {
               });
               console.log(`  Company check: ${companyMatches ? "PASS" : "FAIL"} (resume: [${resumeCompanies.join(", ")}] vs fetched: [${fetchedAllCompanies.slice(0, 3).join(", ")}])`);
 
-              // Title match: key title words appear in headline
+              // Title match: key title words appear in headline (stricter - need "professor" specifically for professors)
               const titleMatches = resumeTitles.some(t => {
                 if (!t) return false;
+                // For professor titles, require "professor" to be in headline
+                if (t.includes("professor")) {
+                  return fetchedHeadline.includes("professor");
+                }
                 // Get significant title words (not prepositions etc)
                 const titleWords = t.split(/\s+/).filter(w => w.length > 3 && !["the", "and", "for", "with"].includes(w));
                 return titleWords.some(word => fetchedHeadline.includes(word));
               });
               console.log(`  Title check: ${titleMatches ? "PASS" : "FAIL"} (resume titles: [${resumeTitles.join(", ")}] vs headline: "${fetchedHeadline}")`);
 
-              // Academic match: both are academic
-              const resumeHasAcademic = resumeCompanies.some(c => c && (c.includes("university") || c.includes("college") || c.includes("institute")));
-              const fetchedIsAcademic = fetchedHeadline.includes("professor") || fetchedHeadline.includes("phd") ||
-                fetchedAllCompanies.some(c => c?.includes("university") || c?.includes("college"));
-              const academicMatches = resumeHasAcademic && fetchedIsAcademic;
-              console.log(`  Academic check: resume=${resumeHasAcademic}, fetched=${fetchedIsAcademic} → ${academicMatches ? "PASS" : "N/A"}`);
+              // Academic match: STRICT - require same university name OR professor in headline
+              const resumeUniversities = resumeCompanies.filter(c => c && (c.includes("university") || c.includes("college") || c.includes("institute")));
+              const resumeHasAcademic = resumeUniversities.length > 0;
+
+              // For academic profiles, require SPECIFIC match
+              let academicMatches = false;
+              if (resumeHasAcademic) {
+                // Check if same university name appears in LinkedIn
+                const sameUniversity = resumeUniversities.some(uni => {
+                  const uniWords = uni.split(/\s+/).filter(w => w.length > 3 && !["university", "college", "institute", "the", "of"].includes(w));
+                  return uniWords.some(word =>
+                    fetchedHeadline.includes(word) ||
+                    fetchedAllCompanies.some(fc => fc?.includes(word))
+                  );
+                });
+                // OR has "professor" in headline
+                const isProfessor = fetchedHeadline.includes("professor");
+                academicMatches = sameUniversity || isProfessor;
+                console.log(`  Academic check: sameUniversity=${sameUniversity}, isProfessor=${isProfessor} → ${academicMatches ? "PASS" : "FAIL"}`);
+              } else {
+                console.log(`  Academic check: N/A (resume not academic)`);
+              }
 
               // Accept if: name matches AND (company OR title OR academic matches)
               // If no resume companies to compare, require title match
@@ -221,10 +262,11 @@ export async function POST(request: NextRequest) {
               const noContextToCompare = resumeCompanies.length === 0 && resumeTitles.length === 0;
 
               console.log(`  Context verdict: company=${companyMatches}, title=${titleMatches}, academic=${academicMatches}, noContext=${noContextToCompare}`);
+              console.log(`  Connections: ${fetchedConnections}, IsStudent: ${isStudentProfile}`);
 
               if (contextMatches || noContextToCompare) {
                 linkedInProfile = fetchedProfile;
-                console.log(`  ✓ ACCEPTED: "${fetchedProfile.fullName}" at "${fetchedProfile.headline}"`);
+                console.log(`  ✓ ACCEPTED: "${fetchedProfile.fullName}" at "${fetchedProfile.headline}" (${fetchedConnections} connections)`);
                 break; // Found a verified match, stop searching
               } else {
                 console.log(`  ✗ REJECTED: Context mismatch - likely different person with same name`);
