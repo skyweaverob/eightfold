@@ -129,16 +129,57 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Try to enrich LinkedIn profile
-          const linkedInResult = deepSearchResults?.profiles.find((p) => p.platform === "linkedin");
-          if (linkedInResult?.url) {
+          // Try to enrich LinkedIn profile - only use personal profile URLs (/in/)
+          // and verify the name matches the resume
+          const linkedInResults = deepSearchResults?.profiles.filter((p) =>
+            p.platform === "linkedin" && p.url.includes("/in/")
+          ) || [];
+
+          let bestLinkedInUrl: string | null = null;
+          const resumeName = parsedResume.fullName?.toLowerCase() || "";
+
+          // Find the LinkedIn profile that best matches the resume name
+          for (const result of linkedInResults) {
+            // Check if the title/snippet contains the person's name
+            const resultText = `${result.title} ${result.snippet}`.toLowerCase();
+            const nameParts = resumeName.split(" ").filter(p => p.length > 2);
+            const matchCount = nameParts.filter(part => resultText.includes(part)).length;
+
+            // Require at least first or last name to match
+            if (matchCount >= 1) {
+              bestLinkedInUrl = result.url;
+              break; // Use the first match (usually most relevant from search)
+            }
+          }
+
+          // Fallback: if no name match, use the first /in/ URL but verify after fetching
+          if (!bestLinkedInUrl && linkedInResults.length > 0) {
+            bestLinkedInUrl = linkedInResults[0].url;
+          }
+
+          if (bestLinkedInUrl) {
             sendProgress(3, "Enriching LinkedIn profile...", "Fetching detailed profile data");
             try {
-              linkedInProfile = await getLinkedInProfile(linkedInResult.url);
+              const fetchedProfile = await getLinkedInProfile(bestLinkedInUrl);
+
+              // Verify the fetched profile name matches the resume (at least partially)
+              const fetchedName = fetchedProfile.fullName?.toLowerCase() || "";
+              const nameParts = resumeName.split(" ").filter(p => p.length > 2);
+              const matchCount = nameParts.filter(part => fetchedName.includes(part)).length;
+
+              if (matchCount >= 1 || !resumeName) {
+                // Name matches or no resume name to compare - use this profile
+                linkedInProfile = fetchedProfile;
+              } else {
+                console.log(`LinkedIn profile name mismatch: "${fetchedProfile.fullName}" vs "${parsedResume.fullName}" - skipping`);
+              }
             } catch (error) {
               console.error("LinkedIn enrichment failed:", error);
             }
-          } else if (parsedResume.email) {
+          }
+
+          // Try email lookup if we still don't have a LinkedIn profile
+          if (!linkedInProfile && parsedResume.email) {
             sendProgress(3, "Looking up LinkedIn by email...", "Attempting to find LinkedIn profile");
             try {
               const linkedInUrl = await lookupLinkedInByEmail(parsedResume.email);
