@@ -127,7 +127,10 @@ ${JSON.stringify(resume, null, 2)}
 ${JSON.stringify(webPresence, null, 2)}
 
 ## LinkedIn Profile (if available)
-${linkedInProfile ? JSON.stringify(linkedInProfile, null, 2) : "Not found"}
+${linkedInProfile ? JSON.stringify({ ...linkedInProfile, recentPosts: undefined }, null, 2) : "Not found"}
+
+## Recent LinkedIn Posts (if available)
+${linkedInProfile?.recentPosts?.length ? linkedInProfile.recentPosts.slice(0, 5).map(p => `- [${p.timeAgo}] (${p.numReactions} reactions, ${p.numComments} comments) ${p.text.slice(0, 300)}${p.text.length > 300 ? "..." : ""}`).join("\n") : "No posts available"}
 
 ## Labor Market Skill Demand Data
 ${JSON.stringify(skillDemands, null, 2)}
@@ -135,7 +138,15 @@ ${JSON.stringify(skillDemands, null, 2)}
 ## Deep Web Search Results
 ${deepSearchSummary || "No deep search performed."}
 
-IMPORTANT: Use the deep web search results to significantly inform your analysis. The web search reveals:
+IMPORTANT: Use both the deep web search results AND LinkedIn posts to significantly inform your analysis.
+
+LinkedIn posts reveal:
+- Posting frequency → indicates engagement level and professional activity
+- Reaction/comment counts → indicates influence and network engagement
+- Content topics → indicates current focus areas and thought leadership
+- Writing quality → indicates communication skills
+
+The web search reveals:
 - News coverage and media mentions → indicates thought leadership, visibility, and industry recognition
 - Publications and research → indicates expertise depth and academic credibility
 - Speaking engagements → indicates industry recognition and communication skills

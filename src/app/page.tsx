@@ -6,11 +6,12 @@ import { AnalysisDashboard } from "@/components/AnalysisDashboard";
 import { IntroAnimation } from "@/components/IntroAnimation";
 import { Stepper } from "@/components/ui/stepper";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import type { ProfileAnalysis, ParsedResume, WebPresenceResult, SalaryEstimate, DeepSearchResults } from "@/types";
+import type { ProfileAnalysis, ParsedResume, WebPresenceResult, SalaryEstimate, DeepSearchResults, LinkedInProfile } from "@/types";
 
 interface AnalysisResult {
   parsedResume: ParsedResume;
   webPresence: WebPresenceResult[];
+  linkedInProfile?: LinkedInProfile;
   analysis: ProfileAnalysis;
   salaryEstimate?: SalaryEstimate;
   deepSearchResults?: DeepSearchResults;
@@ -233,6 +234,7 @@ export default function Home() {
           analysis={result.analysis}
           resume={result.parsedResume}
           webPresence={result.webPresence}
+          linkedInProfile={result.linkedInProfile}
           salaryEstimate={result.salaryEstimate}
           deepSearchResults={result.deepSearchResults}
         />

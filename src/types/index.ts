@@ -65,6 +65,18 @@ export interface WebPresenceResult {
   rawData?: Record<string, unknown>;
 }
 
+export interface LinkedInPost {
+  text: string;
+  postUrl: string;
+  postedAt: string;
+  timeAgo: string;
+  numReactions: number;
+  numComments: number;
+  numReposts: number;
+  images: string[];
+  videoUrl?: string;
+}
+
 export interface LinkedInProfile {
   url: string;
   fullName?: string;
@@ -77,6 +89,8 @@ export interface LinkedInProfile {
   education?: Education[];
   skills?: string[];
   certifications?: Certification[];
+  profilePicture?: string;
+  recentPosts?: LinkedInPost[];
 }
 
 // Search Results

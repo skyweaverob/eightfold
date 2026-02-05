@@ -22,6 +22,7 @@ import type {
   ProfileAnalysis,
   ParsedResume,
   WebPresenceResult,
+  LinkedInProfile,
   SalaryEstimate,
   ParsePreview as ParsePreviewType,
   RedFlag,
@@ -32,6 +33,7 @@ interface AnalysisDashboardProps {
   analysis: ProfileAnalysis;
   resume: ParsedResume;
   webPresence: WebPresenceResult[];
+  linkedInProfile?: LinkedInProfile;
   salaryEstimate?: SalaryEstimate;
   parsePreview?: ParsePreviewType;
   redFlags?: RedFlag[];
@@ -56,10 +58,64 @@ function formatSalaryRange(min: number, max: number): string {
   return `${formattedMin} – ${formattedMax}`;
 }
 
+function generatePersonalOverview(
+  resume: ParsedResume,
+  linkedInProfile: LinkedInProfile | undefined,
+  analysis: ProfileAnalysis
+): string {
+  const name = resume.fullName?.split(" ")[0] || "This candidate";
+  const title = linkedInProfile?.headline || resume.experience?.[0]?.title || "professional";
+  const years = analysis.career.yearsOfExperience;
+  const topSkills = analysis.skills.strengths.slice(0, 3);
+  const industries = analysis.career.industryFocus.slice(0, 2);
+  const progression = analysis.career.progression;
+  const connections = linkedInProfile?.connections;
+  const postCount = linkedInProfile?.recentPosts?.length || 0;
+  const totalReactions = linkedInProfile?.recentPosts?.reduce((sum, p) => sum + p.numReactions, 0) || 0;
+
+  let overview = `${name} is a ${title.toLowerCase().includes("senior") || title.toLowerCase().includes("lead") || title.toLowerCase().includes("director") || title.toLowerCase().includes("vp") || title.toLowerCase().includes("chief") ? "seasoned" : "talented"} ${title}`;
+
+  if (years > 0) {
+    overview += ` with ${years}+ years of experience`;
+  }
+
+  if (industries.length > 0) {
+    overview += ` across ${industries.join(" and ").toLowerCase()}`;
+  }
+
+  overview += ".";
+
+  if (topSkills.length > 0) {
+    overview += ` Particularly strong in ${topSkills.join(", ")}.`;
+  }
+
+  if (progression === "accelerating") {
+    overview += " Their career trajectory shows rapid upward momentum, signaling high growth potential.";
+  } else if (progression === "linear") {
+    overview += " They've shown steady, consistent career growth reflecting deep domain commitment.";
+  } else if (progression === "pivoting") {
+    overview += " Their career shows a strategic pivot, bringing a unique cross-functional perspective.";
+  }
+
+  if (connections && connections > 400) {
+    overview += ` With ${connections.toLocaleString()}+ LinkedIn connections`;
+    if (postCount > 0 && totalReactions > 100) {
+      overview += ` and posts generating ${totalReactions.toLocaleString()}+ reactions, they maintain a strong professional presence and engaged network.`;
+    } else {
+      overview += `, they have a well-established professional network.`;
+    }
+  } else if (postCount > 0 && totalReactions > 50) {
+    overview += ` Their LinkedIn activity shows genuine engagement, with posts garnering ${totalReactions.toLocaleString()}+ reactions.`;
+  }
+
+  return overview;
+}
+
 export function AnalysisDashboard({
   analysis,
   resume,
   webPresence,
+  linkedInProfile,
   salaryEstimate,
   redFlags,
   deepSearchResults,
@@ -162,6 +218,78 @@ export function AnalysisDashboard({
         <span className="md:hidden">AI estimates from your resume</span>
         <span className="hidden md:inline">AI-generated estimates based on your resume and web presence</span>
       </p>
+
+      {/* Personal Overview */}
+      <Card className="border-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 shadow-xl shadow-slate-900/30 rounded-2xl overflow-hidden text-white">
+        <CardContent className="p-5 md:p-8">
+          <div className="flex items-start gap-4 md:gap-5">
+            {linkedInProfile?.profilePicture ? (
+              <img
+                src={linkedInProfile.profilePicture}
+                alt={resume.fullName || "Profile"}
+                className="w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover shadow-lg flex-shrink-0"
+              />
+            ) : (
+              <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                <span className="text-2xl md:text-3xl font-bold text-white">
+                  {(resume.fullName || "?")[0]?.toUpperCase()}
+                </span>
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xl md:text-2xl font-bold tracking-tight">
+                {resume.fullName || "Professional"}
+              </h2>
+              <p className="text-slate-300 text-sm md:text-base mt-0.5">
+                {linkedInProfile?.headline || resume.experience?.[0]?.title || ""}
+                {linkedInProfile?.location ? ` \u00B7 ${linkedInProfile.location}` : resume.location ? ` \u00B7 ${resume.location}` : ""}
+              </p>
+              {linkedInProfile?.connections && (
+                <p className="text-slate-400 text-xs md:text-sm mt-1">
+                  {linkedInProfile.connections.toLocaleString()}+ connections
+                  {linkedInProfile.industry ? ` \u00B7 ${linkedInProfile.industry}` : ""}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Glowing overview text */}
+          <div className="mt-5 md:mt-6 p-4 md:p-5 bg-white/5 rounded-xl border border-white/10">
+            <p className="text-sm md:text-base text-slate-200 leading-relaxed">
+              {generatePersonalOverview(resume, linkedInProfile, analysis)}
+            </p>
+          </div>
+
+          {/* Recent LinkedIn Activity */}
+          {linkedInProfile?.recentPosts && linkedInProfile.recentPosts.length > 0 && (
+            <div className="mt-5 md:mt-6">
+              <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                Recent LinkedIn Activity
+              </h4>
+              <div className="space-y-2.5">
+                {linkedInProfile.recentPosts.slice(0, 3).map((post, i) => (
+                  <a
+                    key={i}
+                    href={post.postUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block p-3 md:p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors border border-white/5"
+                  >
+                    <p className="text-sm text-slate-300 line-clamp-2">
+                      {post.text.slice(0, 200)}{post.text.length > 200 ? "..." : ""}
+                    </p>
+                    <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                      <span>{post.timeAgo}</span>
+                      <span>{post.numReactions.toLocaleString()} reactions</span>
+                      <span>{post.numComments.toLocaleString()} comments</span>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Skills Analysis - Collapsible */}
       <Collapsible

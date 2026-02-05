@@ -1,154 +1,235 @@
-import type { LinkedInProfile, WorkExperience, Education } from "@/types";
+import type { LinkedInProfile, LinkedInPost, WorkExperience, Education } from "@/types";
 
-const BRIGHTDATA_API_URL = "https://api.brightdata.com";
+const RAPIDAPI_HOST = "fresh-linkedin-profile-data.p.rapidapi.com";
+const RAPIDAPI_BASE_URL = `https://${RAPIDAPI_HOST}`;
 
-// Bright Data Web Unlocker for LinkedIn scraping
-// Note: This requires Bright Data Web Unlocker or Scraping Browser product
+// RapidAPI "Fresh LinkedIn Profile Data" for LinkedIn enrichment
+// Endpoints: /enrich-lead (profile), /get-profile-posts (posts)
 
-interface BrightDataLinkedInProfile {
-  name?: string;
+interface RapidAPIProfileResult {
+  first_name?: string;
+  last_name?: string;
+  full_name?: string;
   headline?: string;
   about?: string;
-  location?: string;
-  connections?: string;
-  experience?: {
+  city?: string;
+  country?: string;
+  company?: string;
+  company_industry?: string;
+  connection_count?: number;
+  follower_count?: number;
+  profile_image_url?: string;
+  experiences?: {
     title?: string;
     company?: string;
     location?: string;
-    duration?: string;
+    date_range?: string;
     description?: string;
+    duration?: string;
+    is_current?: boolean;
+    start_year?: number | string;
+    end_year?: number | string;
   }[];
-  education?: {
+  educations?: {
     school?: string;
     degree?: string;
-    field?: string;
-    dates?: string;
+    field_of_study?: string;
+    date_range?: string;
+    start_year?: number | string;
+    end_year?: number | string;
   }[];
   skills?: string[];
 }
 
+interface RapidAPIPostResult {
+  text?: string;
+  post_url?: string;
+  posted?: string;
+  time?: string;
+  num_reactions?: number;
+  num_comments?: number;
+  num_reposts?: number;
+  images?: { url?: string }[];
+  video?: { stream_url?: string };
+}
+
+function getRapidApiKey(): string | null {
+  return process.env.RAPIDAPI_KEY || null;
+}
+
+function rapidApiHeaders(): Record<string, string> {
+  const apiKey = getRapidApiKey();
+  if (!apiKey) throw new Error("RAPIDAPI_KEY not configured");
+  return {
+    "x-rapidapi-host": RAPIDAPI_HOST,
+    "x-rapidapi-key": apiKey,
+  };
+}
+
+/**
+ * Fetch full LinkedIn profile data via /enrich-lead endpoint.
+ * Also fetches recent posts via /get-profile-posts.
+ */
 export async function getLinkedInProfile(
   linkedinUrl: string
 ): Promise<LinkedInProfile> {
-  const apiKey = process.env.BRIGHTDATA_API_KEY;
+  const apiKey = getRapidApiKey();
 
   if (!apiKey) {
-    console.log("BRIGHTDATA_API_KEY not configured, skipping LinkedIn enrichment");
-    // Return minimal profile based on URL
-    return {
-      url: linkedinUrl,
-    };
+    console.log("RAPIDAPI_KEY not configured, skipping LinkedIn enrichment");
+    return { url: linkedinUrl };
   }
 
   try {
-    // Bright Data's Web Unlocker/Scraping API
-    // This triggers a scrape of the LinkedIn profile
-    const response = await fetch(`${BRIGHTDATA_API_URL}/datasets/v3/trigger`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        dataset_id: "gd_l1viktl72bvl7bjuj0", // LinkedIn People Profile dataset
-        url: linkedinUrl,
-        format: "json",
-      }),
-    });
+    // Fetch profile and posts in parallel
+    const [profileData, postsData] = await Promise.all([
+      fetchProfileData(linkedinUrl),
+      fetchProfilePosts(linkedinUrl),
+    ]);
 
-    if (!response.ok) {
-      console.error(`Bright Data request failed: ${response.status} ${response.statusText}`);
-      return { url: linkedinUrl };
+    if (!profileData) {
+      return { url: linkedinUrl, recentPosts: postsData };
     }
 
-    const data: BrightDataLinkedInProfile = await response.json();
+    const fullName = profileData.full_name ||
+      `${profileData.first_name || ""} ${profileData.last_name || ""}`.trim() ||
+      undefined;
 
-    // Transform to our format
+    const location = [profileData.city, profileData.country]
+      .filter(Boolean)
+      .join(", ") || undefined;
+
     const experience: WorkExperience[] =
-      data.experience?.map((exp) => ({
+      profileData.experiences?.map((exp) => ({
         company: exp.company || "Unknown",
         title: exp.title || "Unknown",
         location: exp.location,
         description: exp.description,
+        startDate: exp.start_year ? String(exp.start_year) : undefined,
+        endDate: exp.is_current ? undefined : (exp.end_year ? String(exp.end_year) : undefined),
+        current: exp.is_current,
       })) || [];
 
     const education: Education[] =
-      data.education?.map((edu) => ({
+      profileData.educations?.map((edu) => ({
         institution: edu.school || "Unknown",
         degree: edu.degree,
-        field: edu.field,
+        field: edu.field_of_study,
+        startDate: edu.start_year ? String(edu.start_year) : undefined,
+        endDate: edu.end_year ? String(edu.end_year) : undefined,
       })) || [];
-
-    // Parse connections (e.g., "500+ connections" -> 500)
-    const connectionsStr = data.connections || "";
-    const connectionsMatch = connectionsStr.match(/(\d+)/);
-    const connections = connectionsMatch ? parseInt(connectionsMatch[1], 10) : undefined;
 
     return {
       url: linkedinUrl,
-      fullName: data.name,
-      headline: data.headline,
-      summary: data.about,
-      location: data.location,
-      connections,
+      fullName,
+      headline: profileData.headline,
+      summary: profileData.about,
+      location,
+      industry: profileData.company_industry,
+      connections: profileData.connection_count,
       experience,
       education,
-      skills: data.skills,
+      skills: profileData.skills,
+      profilePicture: profileData.profile_image_url,
+      recentPosts: postsData,
     };
   } catch (error) {
-    console.error("Bright Data LinkedIn fetch failed:", error);
+    console.error("RapidAPI LinkedIn fetch failed:", error);
     return { url: linkedinUrl };
+  }
+}
+
+async function fetchProfileData(
+  linkedinUrl: string
+): Promise<RapidAPIProfileResult | null> {
+  try {
+    const params = new URLSearchParams({
+      linkedin_url: linkedinUrl,
+      include_skills: "true",
+    });
+
+    console.log(`RapidAPI: Fetching LinkedIn profile for ${linkedinUrl}`);
+
+    const response = await fetch(
+      `${RAPIDAPI_BASE_URL}/enrich-lead?${params.toString()}`,
+      { headers: rapidApiHeaders() }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`RapidAPI profile request failed: ${response.status}`, errorText);
+      return null;
+    }
+
+    const result = await response.json();
+    const data: RapidAPIProfileResult = result.data || result;
+
+    console.log(`RapidAPI: Got profile for ${data.full_name || data.first_name || "unknown"}`);
+    return data;
+  } catch (error) {
+    console.error("RapidAPI profile fetch failed:", error);
+    return null;
+  }
+}
+
+async function fetchProfilePosts(
+  linkedinUrl: string
+): Promise<LinkedInPost[]> {
+  try {
+    const params = new URLSearchParams({
+      linkedin_url: linkedinUrl,
+      type: "posts",
+    });
+
+    console.log(`RapidAPI: Fetching LinkedIn posts for ${linkedinUrl}`);
+
+    const response = await fetch(
+      `${RAPIDAPI_BASE_URL}/get-profile-posts?${params.toString()}`,
+      { headers: rapidApiHeaders() }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`RapidAPI posts request failed: ${response.status}`, errorText);
+      return [];
+    }
+
+    const result = await response.json();
+    const posts: RapidAPIPostResult[] = result.data || [];
+
+    console.log(`RapidAPI: Got ${posts.length} posts`);
+
+    return posts.slice(0, 10).map((post) => ({
+      text: post.text || "",
+      postUrl: post.post_url || "",
+      postedAt: post.posted || "",
+      timeAgo: post.time || "",
+      numReactions: post.num_reactions || 0,
+      numComments: post.num_comments || 0,
+      numReposts: post.num_reposts || 0,
+      images: (post.images || []).map((img) => img.url || "").filter(Boolean),
+      videoUrl: post.video?.stream_url,
+    }));
+  } catch (error) {
+    console.error("RapidAPI posts fetch failed:", error);
+    return [];
   }
 }
 
 export async function lookupLinkedInByEmail(
   email: string
 ): Promise<string | null> {
-  // Bright Data doesn't have direct email-to-LinkedIn lookup
-  // This would require their People Discovery dataset
-  // For now, return null and rely on search-based discovery
+  // RapidAPI Fresh LinkedIn Profile Data doesn't support email lookup
+  // Rely on search-based discovery instead
   console.log(`LinkedIn lookup by email not available for: ${email}`);
   return null;
 }
 
-// Alternative: Use Bright Data SERP API to find LinkedIn profiles
 export async function searchLinkedInProfiles(
   name: string,
   context?: { company?: string; title?: string }
 ): Promise<string | null> {
-  const apiKey = process.env.BRIGHTDATA_API_KEY;
-
-  if (!apiKey) {
-    return null;
-  }
-
-  try {
-    const query = `site:linkedin.com/in "${name}" ${context?.company || ""} ${context?.title || ""}`.trim();
-
-    const response = await fetch(`${BRIGHTDATA_API_URL}/serp/google`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query,
-        num: 5,
-      }),
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-    const linkedInResult = data.organic?.find((r: { link: string }) =>
-      r.link?.includes("linkedin.com/in/")
-    );
-
-    return linkedInResult?.link || null;
-  } catch (error) {
-    console.error("Bright Data SERP search failed:", error);
-    return null;
-  }
+  // Handled by the deep web search in serpapi.ts
+  console.log(`LinkedIn profile search for "${name}" handled by web search`);
+  return null;
 }
