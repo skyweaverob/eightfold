@@ -162,16 +162,35 @@ export async function POST(request: NextRequest) {
             try {
               const fetchedProfile = await getLinkedInProfile(bestLinkedInUrl);
 
-              // Verify the fetched profile name matches the resume (at least partially)
+              // Verify the fetched profile matches the resume
+              // Check name match
               const fetchedName = fetchedProfile.fullName?.toLowerCase() || "";
               const nameParts = resumeName.split(" ").filter(p => p.length > 2);
-              const matchCount = nameParts.filter(part => fetchedName.includes(part)).length;
+              const nameMatchCount = nameParts.filter(part => fetchedName.includes(part)).length;
+              const nameMatches = nameMatchCount >= 1 || !resumeName;
 
-              if (matchCount >= 1 || !resumeName) {
-                // Name matches or no resume name to compare - use this profile
+              // Check title/company match to avoid same-name different-person issues
+              const resumeCompanies = parsedResume.experience?.slice(0, 3).map(e => e.company?.toLowerCase()) || [];
+              const resumeTitles = parsedResume.experience?.slice(0, 3).map(e => e.title?.toLowerCase()) || [];
+              const fetchedHeadline = fetchedProfile.headline?.toLowerCase() || "";
+              const fetchedCompany = fetchedProfile.experience?.[0]?.company?.toLowerCase() || "";
+
+              // Check if any resume company or title appears in LinkedIn profile
+              const companyMatches = resumeCompanies.some(c => c && (fetchedHeadline.includes(c) || fetchedCompany.includes(c)));
+              const titleMatches = resumeTitles.some(t => t && fetchedHeadline.includes(t.split(" ").slice(-1)[0] || "")); // Match key title word
+
+              // Also check for academic indicators if resume has university experience
+              const resumeHasAcademic = resumeCompanies.some(c => c && (c.includes("university") || c.includes("college") || c.includes("institute")));
+              const fetchedIsAcademic = fetchedHeadline.includes("professor") || fetchedHeadline.includes("university") || fetchedHeadline.includes("faculty");
+
+              // Accept if: name matches AND (company/title matches OR both are academic OR no company info to compare)
+              const contextMatches = companyMatches || titleMatches || (resumeHasAcademic && fetchedIsAcademic) || resumeCompanies.length === 0;
+
+              if (nameMatches && contextMatches) {
                 linkedInProfile = fetchedProfile;
+                console.log(`LinkedIn profile verified: "${fetchedProfile.fullName}" at "${fetchedProfile.headline}"`);
               } else {
-                console.log(`LinkedIn profile name mismatch: "${fetchedProfile.fullName}" vs "${parsedResume.fullName}" - skipping`);
+                console.log(`LinkedIn profile context mismatch: "${fetchedProfile.fullName}" (${fetchedProfile.headline}) vs resume companies [${resumeCompanies.join(", ")}] - skipping`);
               }
             } catch (error) {
               console.error("LinkedIn enrichment failed:", error);
