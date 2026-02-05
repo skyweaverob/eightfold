@@ -58,6 +58,53 @@ function formatSalaryRange(min: number, max: number): string {
   return `${formattedMin} – ${formattedMax}`;
 }
 
+function analyzePostThemes(posts: LinkedInProfile["recentPosts"]): {
+  themes: string[];
+  tone: "thought-leader" | "educator" | "community-builder" | "industry-insider" | "general";
+  avgEngagement: number;
+} {
+  if (!posts || posts.length === 0) {
+    return { themes: [], tone: "general", avgEngagement: 0 };
+  }
+
+  const allText = posts.map(p => p.text.toLowerCase()).join(" ");
+  const avgEngagement = posts.reduce((sum, p) => sum + p.numReactions + p.numComments, 0) / posts.length;
+
+  // Detect themes from post content
+  const themes: string[] = [];
+  const themePatterns: [string, RegExp][] = [
+    ["leadership", /\b(leader|leadership|leading|manage|team|culture)\b/i],
+    ["innovation", /\b(innovat|disrupt|transform|future|emerging|ai|machine learning|tech)\b/i],
+    ["career advice", /\b(career|hiring|job|interview|resume|advice|tips|learn)\b/i],
+    ["industry insights", /\b(market|industry|trend|analysis|research|data|report)\b/i],
+    ["entrepreneurship", /\b(startup|founder|entrepreneur|business|venture|scale)\b/i],
+    ["mentorship", /\b(mentor|coach|guide|help|support|grow|develop)\b/i],
+    ["diversity & inclusion", /\b(divers|inclus|equity|belong|represent)\b/i],
+    ["sustainability", /\b(sustain|climate|green|environment|impact|social)\b/i],
+    ["personal growth", /\b(growth|mindset|journey|learn|reflect|grateful)\b/i],
+  ];
+
+  for (const [theme, pattern] of themePatterns) {
+    if (pattern.test(allText)) {
+      themes.push(theme);
+    }
+  }
+
+  // Determine posting tone
+  let tone: "thought-leader" | "educator" | "community-builder" | "industry-insider" | "general" = "general";
+  if (/\b(here's what|lessons|key takeaway|thread|insight)\b/i.test(allText)) {
+    tone = "thought-leader";
+  } else if (/\b(learn|teach|explain|how to|guide|tip)\b/i.test(allText)) {
+    tone = "educator";
+  } else if (/\b(community|connect|network|support|together|congrat)\b/i.test(allText)) {
+    tone = "community-builder";
+  } else if (/\b(market|industry|company|business|quarter|growth)\b/i.test(allText)) {
+    tone = "industry-insider";
+  }
+
+  return { themes: themes.slice(0, 3), tone, avgEngagement };
+}
+
 function generatePersonalOverview(
   resume: ParsedResume,
   linkedInProfile: LinkedInProfile | undefined,
@@ -70,42 +117,78 @@ function generatePersonalOverview(
   const industries = analysis.career.industryFocus.slice(0, 2);
   const progression = analysis.career.progression;
   const connections = linkedInProfile?.connections;
-  const postCount = linkedInProfile?.recentPosts?.length || 0;
-  const totalReactions = linkedInProfile?.recentPosts?.reduce((sum, p) => sum + p.numReactions, 0) || 0;
+  const posts = linkedInProfile?.recentPosts;
+  const postCount = posts?.length || 0;
+  const totalReactions = posts?.reduce((sum, p) => sum + p.numReactions, 0) || 0;
 
-  let overview = `${name} is a ${title.toLowerCase().includes("senior") || title.toLowerCase().includes("lead") || title.toLowerCase().includes("director") || title.toLowerCase().includes("vp") || title.toLowerCase().includes("chief") ? "seasoned" : "talented"} ${title}`;
+  // Analyze their LinkedIn posts for themes and tone
+  const postAnalysis = analyzePostThemes(posts);
+
+  // Determine seniority descriptor
+  const isSenior = title.toLowerCase().includes("senior") || title.toLowerCase().includes("lead") ||
+    title.toLowerCase().includes("director") || title.toLowerCase().includes("vp") ||
+    title.toLowerCase().includes("chief") || title.toLowerCase().includes("professor") ||
+    title.toLowerCase().includes("principal") || title.toLowerCase().includes("head");
+
+  let overview = `${name} is a ${isSenior ? "distinguished" : "talented"} ${title}`;
 
   if (years > 0) {
     overview += ` with ${years}+ years of experience`;
   }
 
   if (industries.length > 0) {
-    overview += ` across ${industries.join(" and ").toLowerCase()}`;
+    overview += ` in ${industries.join(" and ").toLowerCase()}`;
   }
 
   overview += ".";
 
+  // Add skill-based praise
   if (topSkills.length > 0) {
-    overview += ` Particularly strong in ${topSkills.join(", ")}.`;
+    overview += ` Known for exceptional expertise in ${topSkills.join(", ")}.`;
   }
 
+  // Add career trajectory insight
   if (progression === "accelerating") {
-    overview += " Their career trajectory shows rapid upward momentum, signaling high growth potential.";
+    overview += " Their career shows a steep upward trajectory — a clear indicator of high-impact potential.";
   } else if (progression === "linear") {
-    overview += " They've shown steady, consistent career growth reflecting deep domain commitment.";
+    overview += " A consistent track record of progressive growth demonstrates deep domain mastery.";
   } else if (progression === "pivoting") {
-    overview += " Their career shows a strategic pivot, bringing a unique cross-functional perspective.";
+    overview += " Their career pivot reveals strategic thinking and adaptability.";
   }
 
-  if (connections && connections > 400) {
-    overview += ` With ${connections.toLocaleString()}+ LinkedIn connections`;
-    if (postCount > 0 && totalReactions > 100) {
-      overview += ` and posts generating ${totalReactions.toLocaleString()}+ reactions, they maintain a strong professional presence and engaged network.`;
-    } else {
-      overview += `, they have a well-established professional network.`;
+  // Add LinkedIn presence insight based on post analysis
+  if (postCount > 0 && postAnalysis.avgEngagement > 0) {
+    // Tone-based description
+    const toneDescriptions: Record<typeof postAnalysis.tone, string> = {
+      "thought-leader": "actively shares thought leadership content",
+      "educator": "generously shares knowledge and insights with their network",
+      "community-builder": "actively engages and uplifts their professional community",
+      "industry-insider": "provides valuable industry perspectives and analysis",
+      "general": "maintains an active professional presence",
+    };
+
+    overview += ` On LinkedIn, ${name} ${toneDescriptions[postAnalysis.tone]}`;
+
+    // Add theme-based insight
+    if (postAnalysis.themes.length > 0) {
+      overview += `, with a focus on ${postAnalysis.themes.slice(0, 2).join(" and ")}`;
     }
-  } else if (postCount > 0 && totalReactions > 50) {
-    overview += ` Their LinkedIn activity shows genuine engagement, with posts garnering ${totalReactions.toLocaleString()}+ reactions.`;
+
+    // Add engagement metrics
+    if (totalReactions > 500) {
+      overview += `. Their content resonates strongly — generating ${totalReactions.toLocaleString()}+ reactions across recent posts.`;
+    } else if (totalReactions > 100) {
+      overview += `. Their posts consistently spark engagement, with ${totalReactions.toLocaleString()}+ total reactions.`;
+    } else {
+      overview += `.`;
+    }
+  }
+
+  // Add network size if impressive
+  if (connections && connections > 500 && !overview.includes("LinkedIn")) {
+    overview += ` With ${connections.toLocaleString()}+ connections, they've built a substantial professional network.`;
+  } else if (connections && connections > 500) {
+    overview += ` Their ${connections.toLocaleString()}+ connections reflect a well-cultivated professional network.`;
   }
 
   return overview;
