@@ -51,6 +51,10 @@ interface RapidAPIPostResult {
   num_reposts?: number;
   images?: { url?: string }[];
   video?: { stream_url?: string };
+  // Author info (if returned by API)
+  author_name?: string;
+  author_headline?: string;
+  author_url?: string;
 }
 
 function getRapidApiKey(): string | null {
@@ -164,7 +168,13 @@ async function fetchProfileData(
     const result = await response.json();
     const data: RapidAPIProfileResult = result.data || result;
 
-    console.log(`RapidAPI: Got profile for ${data.full_name || data.first_name || "unknown"}`);
+    console.log(`RapidAPI: Got profile for "${data.full_name || data.first_name || "unknown"}"`);
+    console.log(`  Headline: "${data.headline}"`);
+    console.log(`  Current company: "${data.company}"`);
+    console.log(`  Industry: "${data.company_industry}"`);
+    if (data.experiences?.length) {
+      console.log(`  Work history: ${data.experiences.slice(0, 3).map(e => `${e.title} @ ${e.company}`).join(", ")}`);
+    }
     return data;
   } catch (error) {
     console.error("RapidAPI profile fetch failed:", error);
@@ -197,7 +207,17 @@ async function fetchProfilePosts(
     const result = await response.json();
     const posts: RapidAPIPostResult[] = result.data || [];
 
-    console.log(`RapidAPI: Got ${posts.length} posts`);
+    console.log(`RapidAPI: Got ${posts.length} posts for ${linkedinUrl}`);
+
+    // Log first post details for debugging
+    if (posts.length > 0) {
+      const firstPost = posts[0];
+      console.log(`  First post preview: "${firstPost.text?.slice(0, 80)}..."`);
+      console.log(`  First post URL: ${firstPost.post_url}`);
+      if (firstPost.author_name || firstPost.author_url) {
+        console.log(`  Post author: ${firstPost.author_name || "unknown"} (${firstPost.author_url || "no url"})`);
+      }
+    }
 
     return posts.slice(0, 10).map((post) => ({
       text: post.text || "",
